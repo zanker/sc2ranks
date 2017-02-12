@@ -1,0 +1,1468 @@
+$white: #EDEDED * 1.1
+$red: #430909
+$green: #094309
+$blue: #A9B0FF
+$background: #535563 * 0.55
+$light_blue: #ABD9D8 * 1.4
+$gold: #F3C90C
+$dark_background: $background * 0.60
+$border_color: #454545 * 1.6
+
+#___plusone_0
+	position: relative
+	top: 1px
+
+=boxShadow($x: 5px, $y: 5px, $blur: 5px, $color: #000)
+	-webkit-box-shadow: $x $y $blur $color
+	-moz-box-shadow: $x $y $blur $color
+	box-shadow: $x $y $blur $color
+
+=borderRadius($radius: 5px)	
+	-moz-border-radius: $radius
+	-webkit-border-radius: $radius
+	-khtml-border-radius: $radius
+	border-radius: $radius
+
+=singleCornerRadius($side, $vert, $width: 5px)
+	-moz-border-radius-#{$vert}#{$side}: $width
+	-webkit-border-#{$vert}-#{$side}-radius: $width
+	border-#{$vert}-#{$side}-radius: $width
+
+=border($width: 1px,$style: solid,$color: #000)
+	border: $width $style $color
+		
+a
+	text-decoration: none
+	outline: none
+	
+	&:link,
+	&:active,
+	&:visited
+		color: #8288FF * 1.3
+	&:hover
+		text-decoration: underline
+		color: #8288FF * 1.6 !important
+	img
+		border: 0px	
+html
+	font-size: 14px
+	font-family: Helvetica, Arial, sans-serif
+	background-color: $background
+	color: $white
+	
+#fdbk_tab
+	position: relative
+	z-index: 1 !important
+
+.text-center
+	text-align: center
+.clearb
+	clear: both
+.w960, .w1140
+	width: 960px
+	margin: 0 auto
+	position: relative
+	z-index: 2
+
+.w960noindex, .w1140noindex
+	width: 960px
+	margin: 0 auto
+
+.w1140, .w1140noindex
+	width: 1140px
+	
+.shadow
+	background-color: $background * 0.8
+	+border(1px, solid, $border_color)
+	+boxShadow(2px, 2px, 1px)
+
+.navbar
+	padding: 3px 6px 3px 6px
+	a
+		color: $gold
+	.right
+		float: right
+	
+	
+
+.spacer
+	margin: 20px 0px 20px 0px
+.smallspacer
+	margin: 10px 0px 10px 0px
+.invisible
+	display: none
+
+.error, .message
+	margin-bottom: 20px
+	background-color: $dark_background
+	+border(1px, solid, $border_color)
+
+	h1
+		margin: 0px
+		padding: 4px 0px 4px 4px
+		font-size: 1em
+		text-shadow: #000 1px 1px 1px
+	p
+		margin: 10px 40px 5px 10px
+.error
+	h1
+		background-color: $red
+.message
+	h1
+		background-color: $green
+
+.focused
+	border: 1px solid $white !important
+
+.ad
+	left: 206px
+	
+.adbannerbg
+	background: url("/images/msg_banner.png")
+	width: 728px
+	height: 90px
+
+.contentfull
+	.contentleft
+		width: 960px !important
+		display: inline-block
+	
+	.contentright
+		float: right
+		background: url("/images/msg_skybox.png")
+		width: 160px
+		height: 600px
+		+border(1px, solid, $border_color)
+		
+		
+.adboxbg
+	background: url("/images/msg_box.png")
+	width: 300px
+	height: 250px
+
+.copyright, .goldlink
+	a
+		color: $gold
+		&:hover
+			color: $white
+	.zam
+		vertical-align: middle
+
+
+.example
+	color: $white * 0.70 !important
+	font-style: italic
+
+.csearch-form
+	.csearch-code
+		width: 35px
+		text-align: center
+	.csearch-name
+		text-align: left !important
+		width: 115px !important
+	.example
+		color: $white * 0.70
+		font-style: italic
+	label
+		color: $gold
+		font-size: 16px
+		
+.menu
+	height: 25px
+	padding-left: 6px
+	padding-right: 6px
+	margin-bottom: 25px
+	line-height: 25px
+	.search
+		float: right
+		line-height: 27px
+		vertical-align: middle
+		
+		select
+			position: relative
+			top: -1px
+		input
+			font-weight: none !important
+	.rowsep
+		border-top: 1px solid black
+
+	ul
+		list-style: none
+		margin: 0px
+		padding: 0px
+
+		.nodropdown
+			margin-right: 20px !important
+			padding-right: 0px !important
+
+		li
+			float: left
+			padding-right: 35px
+			margin-right: 10px
+			line-height: 25px
+			vertical-align: middle
+						
+			ul
+				position: absolute
+				border: 1px solid $border_color
+				list-style: none
+				+boxShadow(2px, 2px, 3px)
+				z-index: 9998 !important
+
+				li
+					margin: 0px					
+					float: none
+					padding-left: 6px
+
+
+	.highlight
+		color: $white !important
+	.text
+		padding-right: 4px
+		color: $gold
+		&:hover
+			color: $white !important
+			text-decoration: none
+
+
+	.arrow
+		float: right
+		position: relative
+		left: 14px
+		top: -14px
+		height: 5px
+		width: 9px
+		background-repeat: no-repeat
+	.down
+		background-image: url("/images/sortdown.png")
+	.up
+		background-image: url("/images/sortup.png")
+					
+.tabs, .ptabs
+	position: relative
+	z-index: 1
+	color: $white
+	font-weight: bold
+	text-shadow: #000 1px 1px 1px
+
+	.highlight
+		background-color: $dark_background * 0.90 !important
+		color: $white
+		cursor: pointer
+	.selected
+		color: $light_blue
+		background-color: $dark_background * 1.2
+	.tab, .ptab
+		.text
+			position: relative
+			top: -5px
+
+		background-repeat: repeat
+		padding: 8px 10px 3px 10px
+		margin: 0px 6px 0px 0px
+		border:
+			color: $border_color
+			width: 1px 1px 0px 1px
+			style: solid
+
+		+boxShadow(1px, 0px, 2px)
+		+singleCornerRadius("left", "top", 5px)
+		+singleCornerRadius("right", "top", 5px)
+		
+.pages
+	position: relative
+	z-index: 2
+	padding: 5px 0px 5px 0px
+	background-color: $background * 0.80
+
+	select
+		position: relative
+		top: 1px
+
+	label, input, select
+		vertical-align: middle
+	label
+		padding-right: 3px
+		padding-left: 7px
+	input[type="submit"]
+		margin-left: 10px
+		width: 48px
+	#filter_region, #search_region
+		margin-left: 8px
+	#f-character
+		input[type="text"]
+			width: 300px
+	#f-search
+		.red
+			font-size: 20px
+			vertical-align: middle
+		.casenote
+			float: right
+			padding-right: 6px
+			padding-top: 2px
+		
+		input[type="text"]
+			width: 125px
+		input[type="checkbox"]
+			height: 13px
+			width: 13px
+			position: relative
+			top: 1px
+	#f-psearch
+		.example
+			color: $white * 0.70
+			font-style: italic
+			
+		#psearch_value, #psearch_region
+			margin-left: 6px
+		
+		input[type="text"]
+			width: 110px
+			
+.paginate-custom
+	float: right !important
+	width: 390px !important
+	
+	a
+		padding-left: 2px
+		padding-right: 2px
+	
+	.social:hover
+		text-decoration: none
+	img
+		position: relative
+		top: 3px
+
+.paginate-admin
+	float: right !important
+	width: 100px !important
+
+.paginate-search
+	float: right !important
+	width: 375px !important
+
+.paginate-top, .paginate-bottom
+	position: relative
+	z-index: 1
+	height: 20px
+	line-height: 20px
+	width: 400px
+	color: $white
+	background-color: $dark_background
+	float: left
+	padding: 4px 0px 4px 0px
+	text-align: center
+
+	font-size: 14px
+	vertical-align: middle
+	
+	input[type="text"]
+		height: 16px
+		width: 38px
+		text-align: center
+		font-size: 14px
+	a
+		color: $gold
+		text-decoration: none
+	a:hover
+		color: $white
+		text-decoration: underline
+	.page
+		width: 150px
+		float: left
+		
+	.previous
+		width: 119px
+		padding-left: 6px
+		float: left
+		text-align: left
+		
+		.first
+			color: $white
+			padding-right: 6px
+
+	.next
+		padding-right: 6px
+		width: 119px
+		float: right
+		text-align: right
+		
+		.last
+			color: $white
+			padding-left: 6px
+.paginate-right
+	float: right
+	width: 225px
+
+.paginate-right.seasons
+	width: auto
+	padding-right: 6px
+	padding-left: 6px
+
+.paginate-top
+	padding-bottom: 5px
+	top: 1px
+	+singleCornerRadius("left", "top", 5px)
+	+singleCornerRadius("right", "top", 5px)
+	+boxShadow(1px, 0px, 2px)
+	border:
+		color: $border_color
+		width: 1px 1px 0px 1px
+		style: solid
+
+.paginate-bottom
+	padding-top: 5px
+	top: -1px
+	z-index: 2
+	+singleCornerRadius("left", "bottom", 5px)
+	+singleCornerRadius("right", "bottom", 5px)
+	+boxShadow(1px, 2px, 1px)
+	border:
+		color: $border_color
+		width: 1px 1px 1px 1px
+		style: solid
+	.info
+		position: relative
+		top: -2px
+
+select, input, label
+	padding: 0px 0px 0px 0px
+	
+select
+	background-color: $dark_background * 0.5
+	color: $white
+	+border(1px, solid, $border_color * 1.2)
+.disabled
+	color: $white * 0.70
+select[disabled]
+	color: $white * 0.65
+	+border(1px, solid, $border_color)
+	background-color: $dark_background
+input[type="text"], input[type="password"]
+	background-color: $dark_background
+	color: $white
+	+border(1px, solid, $border_color * 1.2)
+	font-size: 14px
+
+input[type="submit"]
+	width: 60px
+	background-color: $dark_background
+	color: $white
+	+border(1px, solid, $border_color * 1.2)
+	font-size: 14px
+
+.header
+	padding-left: 6px
+	margin: 0px
+	color: $light_blue
+	text-shadow: #000 1px 1px 1px
+	font-size: 1em
+	height: 25px
+	line-height: 25px	
+	
+.rowsep
+	border-top: 1px solid $border_color
+
+.w470
+	width: 470px
+	float: left
+	padding-bottom: 20px
+.faqleft
+	padding-right: 20px
+.faq, .api
+	padding: 0px 0px 5px 0px
+	h1
+		background-color: $dark_background
+	p
+		padding-left: 10px
+		padding-right: 8px
+
+
+.achievementstats
+	margin-top: 30px
+
+.achievements
+	table
+		background-color: black
+		width: 100%
+		position: relative
+		z-index: 2
+	.highlight
+		color: $white !important
+	.noachievements
+		padding: 6px 0px 6px 8px
+	.icon
+		height: 70px
+		width: 90px
+		margin-left: auto
+		margin-right: auto
+	.name
+		padding-left: 6px
+		width: 25%
+		height: 30px
+	.description
+		padding-left: 6px
+		color: $white * 0.75
+	.date, .percent
+		padding-left: 6px
+
+
+.customlist
+	.name
+		width: 30%
+	.listmessage
+		width: 70%
+	
+.maplist
+	.rank
+		width: 7% !important
+	.region
+		width: 7% !important
+	.mapname
+		width: 15% !important
+	.maptype
+		width: 10% !important
+		padding-left: 0px !important
+		text-align: center
+	.points
+		width: 10% !important
+	.age
+		width: 10% !important
+	
+.seasonlist
+	td.wins
+		color: green
+	td.losses
+		color: red
+		
+	.league
+		span, img
+			vertical-align: middle
+	.green
+		color: green !important
+
+#sortlist
+	width: 100%
+	background-color: black
+	
+	position: relative
+	z-index: 2
+	
+	tr
+		height: 28px
+	th
+		border-bottom: 1px solid $border_color
+		background-color: $dark_background * 1.25
+		padding: 4px 0px 4px 0px
+		cursor: pointer
+		color: $light_blue
+	td
+		padding-left: 8px
+
+	.highlight
+		background-color: $dark_background * 0.85 !important
+	#character0, #character1, #character2, #character3, #division
+		text-align: left
+		padding-left: 8px
+	.rank, .region, .points, .games, .teams, .ratio, .age, .wins, .losses, .achievements, .first, .last, .regionrank, .worldrank, .league, .view, .bracket, .divisiongm, .newleague, .oldleague, .oldpoints, .newpoints
+		text-align: center
+		padding: 0px
+		
+		.league
+			padding-right: 4px
+		img.imgbadge
+			margin-right: 4px
+			
+	.newleague, .oldleague
+		span
+			position: relative
+			top: 2px
+	
+	.character
+		padding-left: 2px
+		width: 16%
+	.rank, .region
+		width: 70px
+	.regionrank, .worldrank
+		width: 120px
+	.division
+		width: 22%
+	.divisionrank
+		width: 18%
+	.divisiongm, #divisiongm
+		width: 16%
+	.age
+		width: 9%
+
+.achievementrank
+	.region, .rank
+		width: 70px !important
+	.character0
+		width: 20%
+	.achievements
+		width: 50%
+	.achievements, #achievements
+		padding-left: 8px !important
+		text-align: left !important
+	
+.achieveinfo
+	table
+		width: 100%
+		background-color: black
+	.icon
+		height: 60px
+		width: 60px
+		margin-left: auto
+		margin-right: auto
+	.name
+		width: 20%
+		height: 30px
+	.description, .points, .total, .name, .date
+		padding-left: 6px
+	.points
+		width: 10%
+		
+.achievrank
+	.region, .rank
+		width: 70px !important
+	.character0
+		width: 25%
+	.achievements
+		width: 18%
+	.points
+		width: 12%
+	.age
+		width: 21% !important
+	
+.search
+	.points
+		img, span
+			vertical-align: middle
+			
+	.character0
+		width: 18%
+	.division
+		width: 30%
+	.age
+		width: 14% !important
+
+.patchselect
+	padding: 3px 0px 3px 6px
+	height: 24px
+	line-height: 24px
+	vertical-align: middle
+	font-size: 15px
+
+	select
+		position: relative
+		top: -1px
+
+.divisionmsg
+	padding: 3px 0px 3px 6px
+	font-size: 15px
+	line-height: 20px
+	vertical-align: middle
+
+.stats
+	padding: 8px 0px 8px 6px
+	font-size: 15px
+	line-height: 20px
+	vertical-align: middle
+	border-bottom: 0px
+		
+.divisioninfo
+	padding: 3px 0px 3px 6px
+	height: 20px
+	font-size: 15px
+	line-height: 20px
+	vertical-align: middle
+	
+	img
+		float: left
+	.bracket
+		font-weight: bold
+		padding-right: 30px
+		padding-left: 4px
+	
+
+.number, .apiarg
+	color: $gold * 1
+
+.queued
+	padding: 10px 0px 10px 8px
+
+.green
+	color: $green * 3.5
+.red
+	color: $red * 3.6
+
+.darkbg
+	background-color: $dark_background * 1.30
+.lightbg
+	background-color: $background * 0.95
+.protoss
+	position: relative
+	top: -2px
+
+.earnedborder
+	border: 1px solid $blue !important
+	+boxShadow(0px, 0px, 7px, $blue * 1.10)
+	display: block
+	border: 1px solid $border_color * 0.6
+	display: block
+	margin-left: 2px
+
+.borderedicon
+	display: block
+	border: 1px solid $border_color * 0.6
+	+boxShadow(2px, 2px, 3px, #000000)
+	display: block
+	margin-left: 2px
+
+
+.toggleclick
+	width: 47px !important
+	font-size: 28px !important
+	padding: 0px 0px 0px 0px !important
+	line-height: 10px !important
+	font-weight: bold !important
+	vertical-align: middle !important
+	color: $white !important
+	cursor: pointer
+	
+.togglefocus
+	color: $gold !important
+
+//.map-custom
+.map-blizzard
+	color: #858FFF
+
+// Sprites for match things
+.match-win
+	background: url("/images/match-symbols.png") 0 0 no-repeat
+	padding: 0px 0px 0px 25px
+	display: inline-block
+.match-loss, .match-bailer, .match-disagree
+	background: url("/images/match-symbols.png") 0 -43px no-repeat
+	padding: 0px 0px 0px 25px
+	display: inline-block
+.match-tie, .match-undecided
+	background: url("/images/match-symbols.png") 0 -85px no-repeat
+	padding: 0px 0px 0px 25px
+	display: inline-block
+.match-watcher
+	background: url("/images/match-symbols.png") 0 -127px no-repeat
+	padding: 0px 0px 0px 25px
+	display: inline-block
+
+.match-history
+	table
+		width: 100%
+		background-color: black
+	tr
+		height: 28px
+	th
+		border-bottom: 1px solid $border_color
+		background-color: $dark_background * 1.25
+		padding: 4px 0px 4px 0px
+		cursor: pointer
+		color: $light_blue
+		
+	.character0, #character0
+		width: 15%
+		padding-left: 6px
+	.results, .bracket, #results, #bracket
+		width: 8%
+		text-align: center
+		padding-left: 0px !important
+	.points, #points
+		text-align: center
+		width: 5%
+		padding-left: 0px !important
+	.age, #age
+		text-align: center
+		width: 10%
+		padding-left: 0px !important
+		
+	
+.replaysites, .vodsites
+	float: right
+	padding-right: 6px
+
+.replaysearch
+	table
+		position: relative
+		z-index: 1
+		width: 100%
+		background: black
+		tr
+			height: 29px
+		th, .header
+			background-color: $dark_background * 1.25 !important
+	
+	tr
+		th
+			border-bottom: 1px solid $border_color
+
+		th.players
+			padding-left: 6px !important
+			
+		.nolink
+			padding-left: 6px
+
+		.noreplays
+			height: 30px
+			padding-left: 6px
+			
+		.view
+			width: 3%
+			text-align: center
+			padding-left: 0px !important
+		.players
+			width: 10%
+			text-align: left
+			line-height: 26px
+			img
+				vertical-align: middle
+				position: relative
+				top: -1px
+				
+		
+		.rmap
+			width: 10% !important
+			padding-left: 6px
+			text-align: left
+		.rbracket
+			width: 4% !important
+			text-align: center
+			padding-left: 0px !important
+		.age
+			text-align: center
+			width: 7%
+			padding-left: 0px !important	
+			
+.charprofile
+	.topborder
+		border-top: 1px solid $border_color !important
+	
+	.vods
+		tr
+			.players
+				width: 8% !important
+	
+	.history, .replays, .vods
+		table
+			position: relative
+			z-index: 1
+			
+		.topcolumns
+			th
+				border-bottom: 1px solid $border_color
+		.columns
+			th
+				border-top: 1px solid $border_color
+				border-bottom: 1px solid $border_color
+		.matchheader, .replayheader, .vodheader
+			padding: 0px
+			label
+				color: $gold
+				float: left
+				margin-left: 20px
+			.source
+				float: right
+				padding-right: 6px
+
+		.toggleclick
+			float: left
+		
+		tr
+			th.players
+				padding-left: 6px !important
+			.nolink
+				padding-left: 6px
+				
+			.caster
+				width: 6%
+			.round
+				width: 10%
+			.bestof
+				width: 5%
+				text-align: center
+				padding-left: 0px !important
+				
+			.view
+				width: 3%
+				text-align: center
+				padding-left: 0px !important
+			.players
+				width: 10%
+				text-align: left
+				line-height: 26px
+				img
+					vertical-align: middle
+					position: relative
+					top: -1px
+					
+			.rbracket
+				width: 4% !important
+			.rmap
+				width: 10% !important
+			.rage
+				width: 6% !important
+			
+			.map, .rmap
+				width: 15%
+				padding-left: 6px
+				text-align: left
+			.total, .wins, .losses, .tied
+				width: 5%
+				text-align: center
+				padding-left: 0px !important
+			.results, .bracket, .rbracket
+				width: 7%
+				text-align: center
+				padding-left: 0px !important
+			.points
+				text-align: center
+				width: 5%
+				padding-left: 0px !important
+			.age
+				text-align: center
+				width: 7%
+				padding-left: 0px !important
+			
+
+	.message
+		padding: 6px 0px 6px 8px
+	table
+		width: 100%
+		background: black
+		tr
+			height: 29px
+		th, .header
+			background-color: $dark_background * 1.25 !important
+	
+	.lastachieve
+		th
+			border-bottom: 1px solid $border_color
+		.icon
+			display: block
+			float: left
+		td
+			width: 20%
+			height: 55px
+		.noachievements
+			padding: 6px 0px 6px 8px
+			height: 20px !important
+		.wrapper
+			width: 70%
+			float: left
+			padding-left: 8px
+		.name
+			line-height: 22px
+			font-size: 12px
+		.date
+			line-height: 22px
+			font-size: 12px
+	.ptabs
+		padding: 8px 0px 3px 0px 
+	
+	.achievecats
+		margin-bottom: 30px
+		.icon
+			margin-left: auto
+			margin-right: auto
+
+			.text
+				font-size: 12px
+				color: $gold
+				background-color: black
+				height: 14px
+				width: 100%
+				position: relative
+				top: 82%
+				
+		td
+			width: 20%
+			text-align: center
+		.selected
+			a
+				color: $gold !important
+				&:hover
+					color: $white !important
+		.icon, .name
+			margin-top: 5px
+		.name
+			margin-bottom: 5px
+	
+	.flag1, .flag2
+		width: 225px
+		margin-left: 1px
+		
+	.flag1
+		border: 1px solid green
+	.flag2
+		border: 1px solid red * 0.70
+		
+	.profile
+		position: relative
+		z-index: 1
+		
+		.portrait
+			float: left
+			span
+				border-right: 1px solid $border_color
+				display: block
+		.misc-container
+			float: left
+			border-right: 1px solid $border_color
+			height: 75px
+			width: 310px
+			
+			#bnet_loading
+				margin-top: 2px
+				margin-left: 6px
+				margin-right: 4px
+			#update_status
+				margin-left: 2px
+				position: relative
+				top: -6px
+				
+			
+			.replays, .teams
+				float: left
+				width: 50%
+				padding: 4px 0px 0px 6px
+			.maps, .points
+				float: right
+				padding: 4px 6px 0px 0px
+			.rename
+				float: right
+				padding-right: 6px
+				font-size: 13px
+				
+			.name
+				padding: 2px 0px 2px 6px
+				height: 26px
+				line-height: 26px
+				background-color: $dark_background
+				border-bottom: 1px solid $border_color
+				
+				font-size: 16px
+				vertical-align: middle
+				.character-code
+					color: $background * 1.7
+			
+				
+		.achieve-container
+			float: left
+			border-right: 1px solid $border_color
+			height: 75px
+			width: 295px
+			
+			img
+				vertical-align: middle
+				position: relative
+				top: -2px
+			
+			.achievements
+				padding: 2px 0px 2px 6px
+				height: 26px
+				line-height: 26px
+				background-color: $dark_background
+				border-bottom: 1px solid $border_color
+				vertical-align: middle
+
+			.region, .world
+				vertical-align: middle
+				padding: 4px 0px 0px 6px
+
+		.updated-container
+			width: 275px
+			float: left
+			height: 75px
+
+			.social
+				padding: 2px 0px 2px 6px
+				height: 26px
+				line-height: 26px
+				background-color: $dark_background
+				border-bottom: 1px solid $border_color
+				vertical-align: middle
+				
+				a:hover
+					text-decoration: none
+				
+				img
+					position: relative
+					top: 3px
+
+			.lastupdated
+				vertical-align: middle
+
+				.refresh, .time
+					vertical-align: middle
+					padding: 4px 0px 0px 6px
+		.noportrait
+			width: 351px !important
+		
+	.leagues
+		.headerupdated
+			float: right
+			padding-right: 6px
+		.headertext
+			float: left
+			padding-left: 6px
+		th
+			font-size: 16px
+			padding: 4px 0px 4px 0px
+			color: $gold
+			font-weight: normal
+		//.bottomborder
+		//	border-bottom: 1px solid $border_color !important
+		//.bottomborder
+		//	td
+		//		border-bottom: 1px solid $border_color !important
+		.badge
+			width: 35px
+			padding: 3px 6px 3px 6px 
+		.bracket, .history
+			width: 70px
+			text-align: center
+			color: $white
+			
+		.history1
+			a
+				line-height: 25px
+		
+		.historyall
+			a
+				font-size: 12px
+
+
+				
+		.worldrank, .regionrank, .racerank
+			width: 130px
+			padding-left: 4px
+			img, div
+				vertical-align: middle
+			div
+				display: inline
+				padding-left: 6px
+			
+		.divisionrank, .summary
+			padding-left: 6px
+			width: 345px
+		.player
+			a
+				color: $white !important
+		.character
+			width: 150px
+			height: 25px
+			line-height: 25px
+			padding: 0px 0px 0px 0px !important
+			img
+				vertical-align: middle
+				position: relative
+			.terran
+				top: -1px
+			.random
+				top: -1px
+
+.banlist
+	.ip, .date, .unban
+		padding: 0px !important
+		text-align: center
+	
+.loglist
+	.revert, .ban
+		width: 80px
+		padding: 0px !important
+		text-align: center
+	.ip
+		width: 125px
+		padding: 0px !important
+		text-align: center
+	.date
+		width: 140px
+		padding: 0px !important
+		text-align: center
+	
+	
+.customdiv
+	.header
+		background-color: $dark_background
+	.desc
+		padding: 8px 0px 8px 6px
+		
+	.nopad
+		padding-left: 0px !important
+	
+	.row
+		border-top: 1px solid $border_color
+		padding: 8px 0px 8px 6px
+		
+		label
+			float: left
+			width: 30%
+			line-height: 20px
+		input[type="checkbox"]
+			position: relative
+			top: -1px
+			left: -6px
+		textarea
+			width: 99%
+			background-color: $dark_background
+			color: $white
+			+border(1px, solid, $border_color * 1.2)
+			font-size: 14px
+			padding: 0px
+			height: 150px
+		
+
+.teaminfo
+	th
+		border-top: 1px solid $border_color
+	.adbox
+		width: 300px
+		padding: 0px 0px 0px 1px !important
+	.character
+		a
+			line-height: 28px
+			vertical-align: middle
+		img
+			position: relative
+			top: 3px
+
+.teamgraph
+	.right
+		float: right
+		padding-right: 8px
+		img
+			vertical-align: middle
+			position: relative
+			top: -2px
+			display: none
+		span, img
+			padding-right: 8px
+	
+	#nodata
+		padding-left: 8px
+		height: 30px
+		line-height: 30px
+		
+	#container, #containerall, #container24
+		height: 350px
+		width: 100%
+		margin: 0 auto
+		clear: both
+
+.teaminfo, .teamhistory, .teamgraph
+	background: black
+	
+	th, .header
+		text-align: left
+		background-color: $dark_background
+		padding: 4px 0px 4px 8px
+		border-bottom: 1px solid $border_color
+		color: $white
+	tr
+		height: 28px
+	td
+		padding-left: 6px
+		div, img
+			vertical-align: middle
+			display: inline
+			margin-right: 3px
+		.green
+			color: $green * 3.5
+		.red
+			color: $red * 4
+		
+	.label
+		width: 17%
+		color: $gold
+		
+		span
+			position: relative
+			top: 2px
+				
+		div
+			float: right
+
+.teamhistory
+	tr
+		height: 31px
+	.league
+		width: 60px
+		text-align: center
+		padding: 0px
+		span
+			vertical-align: middle
+			padding-left: 6px
+	.points
+		width: 200px
+	.world
+		width: 175px
+
+.rankings
+	img, a
+		vertical-align: middle
+
+.mapsum
+	th
+		text-align: center !important
+		
+	.totals
+		border-bottom: 1px solid $border_color
+
+.stats, .tblstats, .mapsum
+	table
+		width: 100%
+		background: black
+	th
+		text-align: left
+		padding: 4px 0px 4px 8px
+		border-bottom: 1px solid $border_color
+		img
+			vertical-align: middle
+	td
+		padding: 3px 0px 3px 8px
+		height: 28px
+		
+	.raceicon
+		padding-left: 0px
+		span
+			position: relative
+			top: 1px
+		img
+			vertical-align: middle
+	.league
+		span
+			position: relative
+			top: 1px
+		img
+			vertical-align: middle
+			padding-right: 5px
+		
+	.header
+		color: $white
+		background: $dark_background * 1.40
+		padding: 4px 0px 4px 8px
+		height: 21px
+		
+		img
+			vertical-align: middle
+			position: relative
+		div
+			display: inline
+			padding-left: 3px
+	
+	.namestats
+		.rank
+			text-align: center
+		.name, .total
+			padding-left: 8px
+		.name
+			width: 20%
+		.rank
+			width: 20%
+		
+			
+	.columns
+		color: $light_blue
+		background: $dark_background
+	.region, .league, race, .type
+		width: 140px
+			
+	.racegraph
+		.container
+			height: 350px
+	.pointsgraph
+		.container
+			height: 500px
+			background-color: $dark_background
+		
+	.racegraph, .pointsgraph
+		padding: 0px
+
+		.loading
+			position: relative
+			top: 50%
+			float: left
+			width: 100%
+			height: 100%
+			text-align: center
+			font-size: 18px
+
+		.container
+			width: 100%
+			margin: 0 auto
+			clear: both
+	
+span.badge
+	display: inline-block
+	padding: 0px !important
+	margin: 0px !important
+
+.badge.badge-bronze
+	background: url("../images/leagues/bronze.png") 0 0 no-repeat
+.badge.badge-silver
+	background: url("../images/leagues/silver.png") 0 0 no-repeat
+.badge.badge-gold
+	background: url("../images/leagues/gold.png") 0 0 no-repeat
+.badge.badge-platinum
+	background: url("../images/leagues/platinum.png") 0 0 no-repeat
+.badge.badge-diamond
+	background: url("../images/leagues/diamond.png") 0 0 no-repeat
+.badge.badge-master
+	background: url("../images/leagues/master.png") 0 0 no-repeat
+.badge.badge-grandmaster
+	background: url("../images/leagues/grandmaster.png") 0 0 no-repeat
+.badge.badge-none
+	background: url("../images/league/none.png") 0 0 no-repeat
+.badge.badge-large-1, .badge.badge-large-2, .badge.badge-large-3, .badge.badge-large-4
+	width: 100px !important
+	height: 100px !important
+.badge.badge-large-1
+	background-position: 0 0
+.badge.badge-large-2
+	background-position: 0 -105px
+.badge.badge-large-3
+	background-position: 0 -210px
+.badge.badge-large-4
+	background-position: 0 -315px
+	height: 105px !important
+	position: relative !important
+	top: 1px !important
+	
+.badge.badge-medium-1, .badge.badge-medium-2, .badge.badge-medium-3, .badge.badge-medium-4
+	width: 45px !important
+	height: 45px !important
+.badge.badge-medium-1
+	background-position: -100px 0
+.badge.badge-medium-2
+	background-position: -100px -50px
+.badge.badge-medium-3
+	background-position: -100px -100px
+.badge.badge-medium-4
+	background-position: -100px -150px
+	height: 50px !important
+	position: relative !important
+	top: 1px !important
+
+.badge.badge-small-1, .badge.badge-small-2, .badge.badge-small-3, .badge.badge-small-4
+	width: 25px !important
+	height: 25px !important
+.badge.badge-small-1
+	background-position: -145px 0
+.badge.badge-small-2
+	background-position: -145px -30px
+.badge.badge-small-3
+	background-position: -145px -60px
+.badge.badge-small-4
+	background-position: -145px -90px
+	height: 30px !important
+	position: relative !important
+	top: 1px !important
+

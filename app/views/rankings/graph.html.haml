@@ -1,0 +1,19 @@
+- cache("top10history", :raw => true, :expires_in => 1.hour) do
+	.w960
+		.shadow.divisioninfo
+			Data is of the top 10 1v1 Grand Master players and their point changes.
+	.spacer
+	.w960
+		.shadow.teamgraph
+			%h1.header Graph (last week)
+			#container24
+
+	.spacer
+	.w960
+		.shadow.teamgraph
+			%h1.header Graph (last month)
+			#containerall
+	= build_top_team_graph()
+	= javascript_include_tag("highcharts.src", :cache => "cache-charts", :lifetime => 1.month)
+	= javascript_include_tag("tophistory", :cache => "cache-tophistory", :lifetime => 1.month)
+

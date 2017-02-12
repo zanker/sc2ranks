@@ -1,0 +1,46 @@
+open -a#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "cgi"
+
+start_time = Time.now.to_f
+
+puts "Creating database statistics"
+
+# Do the top 500
+puts "Top 5000 for 1v1 diamond"
+
+ActiveRecord::Base.connection.execute("COPY (SELECT region,points,wins,losses,league,bracket,is_random,race_comp FROM sc2ranks.teams WHERE league=#{LEAGUES["diamond"]} ORDER BY points DESC LIMIT 5000) TO '/tmp/top5000.csv' CSV HEADER;")
+system "gzip -9 -N /tmp/top5000.csv"
+
+puts "Pulling entire team list"
+
+REGIONS.each do |region|
+	LEAGUE_LIST.each do |league|
+		BRACKETS.each do |bracket|
+			puts "Pulling #{region} - #{league} - #{bracket}"
+			ActiveRecord::Base.connection.execute("COPY (SELECT points,wins,losses,league,bracket,is_random,race_comp FROM sc2ranks.teams WHERE region = '#{region}' AND league = #{league} AND bracket = #{bracket} AND is_random = false) TO '/tmp/teams-#{region}-#{LEAGUES[league]}-#{bracket}v#{bracket}.csv' CSV HEADER;")
+			system "gzip -9 -N /tmp/teams-#{region}-#{LEAGUES[league]}-#{bracket}v#{bracket}.csv"
+			
+			# Grab random bracket
+			if bracket > 1
+				puts "Pulling #{region} - #{league} - #{bracket} (random)"
+				ActiveRecord::Base.connection.execute("COPY (SELECT points,wins,losses,league,bracket,is_random,race_comp FROM sc2ranks.teams WHERE region = '#{region}' AND league = #{league} AND bracket = #{bracket} AND is_random = true) TO '/tmp/teams-#{region}-#{LEAGUES[league]}-#{bracket}v#{bracket}-random.csv' CSV HEADER;")
+				system "gzip -9 -N /tmp/teams-#{region}-#{LEAGUES[league]}-#{bracket}v#{bracket}-random.csv"
+			end
+		end
+	end
+end
+
+ActiveRecord::Base.connection.execute("COPY (SELECT new_league,wins,losses,points,old_league,old_wins,old_losses,old_points FROM sc2ranks.division_changes) TO '/tmp/division-changes.csv' CSV HEADER;")
+system "gzip -9 -N /tmp/division-changes.csv"
+
+system "mv -f /tmp/*.csv.gz /web/sc2ranks/public/stats"
+system "chown nobody:nobody /web/sc2ranks/public/stats/*"
+
+puts "Done in %.2f seconds" % [Time.now.to_f - start_time]
+
+
+Rails.cache.delete("database/data")

@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "cgi"
+
+offset = 0
+limit = 500
+has_data = true
+
+while has_data do
+	has_data = nil
+	
+	Team.all(:conditions => ["id <= 10976275"], :offset => offset, :limit => limit, :include => :team_characters).each do |team|
+		has_data = true
+		
+		ids = []
+		team.team_characters.each do |relation|
+			ids.push(relation.character_id)
+		end
+		
+		Character.update_all(["season_1 = ?", true], ["id IN(?)", ids])
+
+		puts "[#{offset}] Flagged #{ids.join(", ")} as season 1"
+	end
+	
+	offset += limit
+end
+

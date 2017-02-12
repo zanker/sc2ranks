@@ -1,0 +1,50 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "#{RAILS_ROOT}/script/current_season.rb";
+
+locked_on = Rails.cache.read("block/logs", :raw => true, :expires_in => 1.week)
+if locked_on and locked_on.to_i >= 1.day.ago.utc.to_i
+	puts "Aleady creating logs, returned"
+	return
+end
+
+Rails.cache.write("block/logs", Time.now.utc.to_i, :raw => true, :expires_in => 1.week)
+
+puts "Creating logs"
+
+start_time = Time.now.to_f
+
+# Find the last ID inserted
+history = TeamHistory.first(:select => "id", :order => "id DESC", :limit => 1)
+start_id = (history && history.id || 0) + 1
+
+LEAGUE_LIST.each do |league|
+	BRACKETS.each do |bracket|
+		# Do 1v1, 2v2, 3v3, 4v4 teams
+		ActiveRecord::Base.connection.execute("INSERT INTO team_histories(team_id, points, league, world_rank) SELECT teams.id, teams.points, teams.league, team_rankings.world_rank FROM teams JOIN team_rankings ON team_rankings.team_id=teams.id WHERE teams.league = #{league} AND teams.is_random = false AND teams.bracket = #{bracket} AND teams.points > 0 AND teams.last_game_at > '#{24.hours.ago.utc.to_s(:db)}' AND teams.division_id IS NOT NULL AND teams.season = #{current_season};")
+		
+		# Now do 2v2, 3v3, 4v4 random teams
+		if bracket > 1
+			ActiveRecord::Base.connection.execute("INSERT INTO team_histories(team_id, points, league, world_rank) SELECT teams.id, teams.points, teams.league, team_rankings.world_rank FROM teams JOIN team_rankings ON team_rankings.team_id=teams.id WHERE teams.league = #{league} AND teams.is_random = true AND teams.bracket = #{bracket} AND teams.points > 0 AND teams.last_game_at > '#{24.hours.ago.utc.to_s(:db)}' AND teams.division_id IS NOT NULL AND teams.season = #{current_season};")
+		end
+	end
+end
+
+# Now find the last ID inserted
+history = TeamHistory.first(:select => "id", :order => "id DESC", :limit => 1)
+end_id = history && history.id || 1
+
+if end_id > start_id
+	TeamHistoryPeriod.create(:starts_at => start_id, :ends_at => end_id)
+
+	puts "Finished, we started at #{start_id} and ended at #{end_id}, #{end_id - start_id} new records took %.2f minutes" % [(Time.now.to_f - start_time).to_f / 60]
+	
+	Rails.cache.write("logs/generated", Time.now.to_i, :raw => true, :expires_in => 48.hours)
+else
+	puts "No records added"
+end
+
+Rails.cache.delete("block/logs")

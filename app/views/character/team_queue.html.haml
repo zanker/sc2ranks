@@ -1,0 +1,6 @@
+- @page_title = "Loading team data"
+:javascript
+	setTimeout("window.location.reload();", #{@eta} * 1000)
+.w960
+	.shadow.queued
+		Missing data on #{wrap_number(@missing_teams)} of your teams, loading them now. You are #{wrap_number("##{@position}")} in the queue, ETA #{distance_in_words(@eta)}.

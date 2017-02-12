@@ -1,0 +1,57 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "cgi"
+
+puts "Creating database sample"
+
+character_ids = []
+char_data = "id,region,name,bnet_id\n"
+
+LEAGUE_LIST.each do |league|
+	Character.all(:select => "characters.*", :joins => "LEFT JOIN team_characters ON team_characters.character_id=characters.id LEFT JOIN teams ON teams.id=team_characters.team_id", :conditions => ["characters.region = 'us' AND teams.league = ? AND teams.bracket = ? AND teams.points > ?", league, 1, 0], :limit => 2000, :order => "points ASC").each do |character|
+		character_ids.push(character.id)
+		char_data << "#{character.id},#{character.region},#{CGI.escape(character.name)},#{character.bnet_id}\n"
+	end
+end
+
+open(File.join(Rails.root, "public", "characters.csv"), "w+").write(char_data)
+
+char_data = nil
+
+
+team_ids = []
+relation_data = "team_id,character_id\n"
+
+TeamCharacter.all(:select => "team_characters.team_id, team_characters.character_id", :joins => "LEFT JOIN teams ON teams.id=team_characters.team_id", :conditions => ["teams.bracket = ? AND team_characters.character_id IN(?)", 1, character_ids]).each do |relation|
+	team_ids.push(relation.team_id)
+	relation_data << "#{relation.team_id},#{relation.character_id}\n"
+end
+
+open(File.join(Rails.root, "public", "relations.csv"), "w+").write(relation_data)
+
+relation_data = nil
+character_ids = nil
+
+
+division_ids = []
+team_data = "id,region,points,wins,losses,division_id,division_rank,league,bracket,is_random\n"
+
+Team.all(:select => "id,region,points,wins,losses,division_id,division_rank,league,bracket,is_random", :conditions => ["id IN(?)", team_ids]).each do |team|
+	division_ids.push(team.division_id)
+	team_data << "#{team.id},#{team.region},#{team.points},#{team.wins},#{team.losses},#{team.division_id},#{team.division_rank},#{team.league},#{team.bracket},#{team.is_random}\n"
+end
+
+open(File.join(Rails.root, "public", "teams.csv"), "w+").write(team_data)
+team_data = nil
+team_ids = nil
+
+division_data = "id,region,name,league,bracket,is_random,bnet_id\n"
+
+Division.all(:select => "id,region,name,league,bracket,is_random,bnet_id", :conditions => ["id IN(?)", division_ids]).each do |division|
+	division_data << "#{division.id},#{division.region},#{division.name},#{division.league},#{division.bracket},#{division.is_random},#{division.bnet_id}\n"
+end
+
+open(File.join(Rails.root, "public", "divisions.csv"), "w+").write(division_data)

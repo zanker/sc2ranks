@@ -1,0 +1,49 @@
+- @page_title = "#{@character.name}'s achievement profile"
+- cache("achievements/header/#{@character.cache_key}", :raw => true, :expires_in => 4.hours) do
+	.charprofile
+		= render :partial => "character_header", :locals => {:character => @character, :team_stats => @team_stats}
+		- if @character.achievements.count == 0
+			.spacer
+			.w960
+				.message.shadow.darkbg
+					No achievements have been loaded for this character yet. A refresh will have to be queued to load achievements.
+		-else
+			- reset_cycle
+			.spacer
+			.w960.achievecats
+				%table.shadow{:cellspacing => "1px"}
+					%tr
+						- @character.achievements.all(:select => "character_achievements.*", :conditions => ["achievements.is_parent = ?", true], :joins => "LEFT JOIN achievements ON achievements.achievement_id=character_achievements.achievement_id", :order => "name DESC", :include => :data).each do |achievement|
+							%td{:class => cycle("darkbg", "lightbg")}
+								%span.icon{:style => "background: url(\"/images/#{achievement.data.image_name(:medium)}\") no-repeat scroll #{achievement.data.sprite_location(:medium)} transparent; width: #{achievement.data.image_size(:medium)}px; height: #{achievement.data.image_size(:medium)}px;", :class => achievement.progress.to_i >= achievement.data.finished_at ? "earnedborder" : "borderedicon"}
+									.text #{achievement.progress.to_i} / #{achievement.data.finished_at}
+								.name= achievement.data.name
+							
+- cache("achievements/#{@category_id}/#{@character.cache_key}", :raw => true, :expires_in => 2.hours) do
+	.charprofile
+		- reset_cycle
+		.spacer
+		.w960.achievements
+			.ptabs
+				- ACHIEVEMENT_CATEGORIES.each do |achievement_id, name|
+					%span.ptab{:onclick => "location.href=\"#{character_achievements_path(@character.region, @character.bnet_id, @character.name, achievement_id)}\"", :class => (achievement_id == @category_id) && "selected" || ""}
+						%span.text= name
+			%table.shadow{:cellspacing => "1px"}
+				- found_achievements = nil
+				- @achievements_earned.each do |achievement|
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.icon{:rowspan => 2}
+							%span.icon{:style => "background: url(\"/images/#{achievement.data.image_name(:small)}\") no-repeat scroll #{achievement.data.sprite_location(:small)} transparent; width: #{achievement.data.image_size(:small)}px; height: #{achievement.data.image_size(:small)}px;", :class => !achievement.earned_on.blank? && "earnedborder" || "borderedicon"}
+						%td.name= link_to(achievement.data.name, achievement_ranks_path(achievement.achievement_id, parameterize(achievement.data.name)))
+						%td.date
+							= day_words_or_time(achievement.earned_on)
+							- if achievement.world_rank
+								= "(#{wrap_number("#%s")} out of #{wrap_number("%s")} worldwide)" % [number_with_delimiter(achievement.world_rank), number_with_delimiter(achievement.data.world_competition)]
+							
+					%tr{:class => current_cycle}
+						%td.description.deschighlight{:colspan => 2}= achievement.data.description
+					- found_achievements = true
+				- unless found_achievements
+					%tr.darkbg
+						%td.noachievements #{@character.name} has not completed any achievements in the #{ACHIEVEMENT_CATEGORIES[@category_id]} category yet.
+						

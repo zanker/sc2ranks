@@ -1,0 +1,227 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "nokogiri"
+
+DEBUG = ARGV && ARGV.first && ARGV.first == "1" ? true : nil
+
+@shutdown = nil
+
+blog_data_file = File.join(Rails.root, "script", "blog_data.json")
+begin
+	blog_browsed_data = YAML::load(File.open(blog_data_file).read) || {}
+rescue Exception => e
+	blog_browsed_data = {}
+end
+
+#self.last_url = "http://#{FORCE_REGION[job.region] || job.region}.battle.net/sc2/#{LOCALES[job.region]}/#{url_args.join("/")}"
+def request_url(url)
+	Armory::Node.base_pull(url)
+end
+
+trap('TERM') { @shutdown = true }
+trap('INT') { @shutdown = true }
+
+begin
+	trap('QUIT') { @shutdown = true }
+rescue ArgumentError
+end
+
+# Pull threads FROM blogs
+def pull_posts(blog_data, base_url)
+	return nil, 0 if @shutdown
+	
+	list = []
+	begin
+		puts "Pulling #{base_url}"
+		threads = request_url("#{base_url}")
+	rescue Exception => e
+		puts e.inspect
+		puts e.backtrace
+	end
+	
+	if threads.nil?
+		puts "Failed to pull blog threads"
+		return nil, 0
+	end
+	
+	threads_doc = Nokogiri::HTML(threads.read)
+	threads_doc.xpath("//a[@class='comments-link']").each do |post_doc|
+		comments = post_doc.text().to_i
+		next if comments == 0
+
+		blog_id = post_doc.attr("href").match("(blog/[0-9]+)#")[1]
+
+		# comments didn't change, skip
+		next if blog_data[blog_id] && blog_data[blog_id] == comments
+		blog_data[blog_id] = comments
+		
+		list.push(blog_id)
+	end	
+	
+	return list
+end
+
+# Pull characters FROM posts
+def pull_characters(base_url, blog_id)
+	return nil, 0 if @shutdown
+
+	list = {}
+	char_codes = {}
+	begin
+		puts "Pulling #{base_url}#{blog_id}" if DEBUG
+		post = request_url("#{base_url}#{blog_id}")
+	rescue Exception => e
+		puts e.inspect
+		puts e.backtrace
+	end
+
+	if post.nil?
+		puts "Failed to pull post"
+		return nil, 0
+	end
+	
+	post_doc = Nokogiri::HTML(post.read)
+	post_doc.xpath("//div[@class='user-name']").each do |profile_doc|
+		url_match = profile_doc.xpath("a").attr("href").to_s.match(/profile\/([0-9]+)\/[0-9]+\/(.+)\//)
+		next if url_match.nil?
+		
+		list[url_match[1].to_i] = url_match[2]
+		
+		character_code = profile_doc.xpath("span").text().match("([0-9]+)")
+		char_codes[url_match[1].to_i] = character_code[1].to_i unless character_code.nil?
+	end	
+	
+	# Figure out total pages
+	pages = post_doc.xpath("//div[@class='pageNav']/a[last() - 1]")
+	pages = pages && pages.first()
+	total_pages = pages && pages.text().to_i || 1
+	
+	return list, char_codes, total_pages
+end
+
+new_characters = {}
+full_start = Time.now.to_f
+
+puts "Starting blog spider"
+REGIONS.reverse.each do |region|
+	break if @shutdown
+	blog_browsed_data[region] ||= {:blogs => {}, :comments => {}, :posts => {}}
+	blog_data = blog_browsed_data[region]
+	
+	region_start = Time.now.to_f
+	
+	base_url = "#{BNET_URLS[region]}/sc2/#{FORUM_LOCALES[region]}/"
+	puts "[#{region}] Onwards #{base_url}"
+	
+	# First pull the directory of blogs
+	begin
+		directory = request_url(base_url)
+	rescue Exception => e
+		puts e.inspect
+		puts e.backtrace
+	end
+	
+	if directory.nil?
+		puts "Failed to pull data for region" if DEBUG
+		next
+	end
+
+	# Check blog
+	post_list = pull_posts(blog_data[:comments], base_url)
+	next if post_list.nil?
+
+	sleep 0.25
+	
+	post_list.uniq!
+	if post_list.length == 0
+		puts "No posts found" if DEBUG
+		next
+	end
+	
+	# Done grabbing a list of posts, scan them all
+	puts "Have #{post_list.length} blog posts to work with" if DEBUG
+	post_list.each do |post_id|
+	 	break if @shutdown
+
+		puts "Pulling post #{post_id}" if DEBUG
+
+		# Find total pages for the post
+		list, char_codes, total_pages = pull_characters(base_url, post_id)
+		next if list.nil?
+		
+		# Scan pages
+		character_list = list
+		code_list = char_codes
+		if total_pages > 1
+			if blog_data[:posts][post_id]
+				start = blog_data[:posts][post_id]
+				puts "Have #{total_pages} pages in this post, grabbing #{start} - #{total_pages}" if DEBUG
+			else
+				start = 1
+				puts "Have #{total_pages} pages in this post, grabbing all of them" if DEBUG
+			end
+			
+			(start...total_pages+1).each do |i|
+			 	break if @shutdown
+
+				list, char_codes, pages = pull_characters(base_url, "#{post_id}?page=#{i}")
+				if list
+					character_list = character_list.merge(list)
+					code_list = code_list.merge(char_codes)
+				end
+			end
+			
+			sleep 0.25
+		end
+		
+		blog_data[:posts][post_id] = total_pages
+
+		sleep 0.25
+
+		if character_list.length == 0
+			puts "No characters found" if DEBUG
+			next
+		end
+
+		# Now queue them
+		puts "Ended up with #{character_list.length} characters" if DEBUG
+		Character.all(:select => "bnet_id, character_code", :conditions => ["region = ? AND bnet_id IN (?)", region, character_list.keys]).each do |character|
+			bnet_id = character.bnet_id.to_i
+			next if code_list[bnet_id] && ( character.character_code.to_i != code_list[bnet_id].to_i )
+			character_list.delete(bnet_id)
+		end
+
+		puts "Now we have #{character_list.length} characters left over." if DEBUG
+		next if character_list.length == 0
+		
+		new_characters[region] ||= 0
+		new_characters[region] += character_list.length
+
+		character_list.each do |bnet_id, name|
+			puts "Queuing #{region}-#{name} (#{bnet_id})" if DEBUG
+			Armory::Queue.character(:region => region, :is_auto => true, :bnet_id => bnet_id.to_i, :name => name, :character_code => code_list[bnet_id.to_i], :tag => 9, :force => true)
+		end
+	end
+	
+	puts "******************* FINISHED REGION **********************"
+	puts "Total new characters: #{new_characters[region].to_i}"
+	puts "Run time: #{(Time.now.to_f - region_start) / 60} minutes"
+
+	open(blog_data_file, "w+") do |file|
+		file.write(blog_browsed_data.to_yaml)
+	end
+end
+
+puts "**********************************"
+puts "Finished full scan"
+puts "**********************************"
+puts new_characters.to_json
+puts "Run time: #{(Time.now.to_f - full_start) / 60} minutes"
+
+open(blog_data_file, "w+") do |file|
+	file.write(blog_browsed_data.to_yaml)
+end

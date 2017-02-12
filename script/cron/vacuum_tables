@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+ActiveRecord::Base.connection.execute("VACUUM armory_jobs;")
+ActiveRecord::Base.connection.execute("ANALYZE armory_jobs;")
+
+ActiveRecord::Base.connection.execute("VACUUM armory_errors;")
+ActiveRecord::Base.connection.execute("ANALYZE armory_errors;")

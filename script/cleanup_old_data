@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+puts "Removing data for teams who haven't played since S1"
+
+=begin
+while true do
+  team_ids = []
+  Team.all(:select => "id", :conditions => {:division_id => nil}, :limit => 100).each do |team|
+    team_ids.push(team.id.to_i)
+    puts "Cleaned #{team.id}"
+    team.destroy
+  end
+
+  if team_ids.empty?
+    break
+  else
+    puts "Removing 100 teams"
+    
+    TeamCharacter.delete_all(["team_id IN(?)", team_ids])
+    TeamHistory.delete_all(["team_id IN(?)", team_ids])
+    TeamRankings.delete_all(["team_id IN(?)", team_ids])
+  end
+end
+=end
+
+puts "Removing old match histories"
+has_record = true
+while has_record do
+  has_record = nil
+
+  MatchHistory.all(:conditions => ["played_on <= ?", 30.days.ago.utc], :limit => 10000).each do |history|
+    puts "Removed #{history.id}"
+    history.delete
+    
+    has_record = true
+  end
+end

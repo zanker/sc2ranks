@@ -1,0 +1,36 @@
+- @page_title = "#{@map.name} details"
+- cache("map/stats/#{@map.id}", :raw => true, :expires_in => 1.hour) do
+	.spacer
+	.w960
+		.divisioninfo.shadow
+			#{@map.region.upcase} #{wrap_number(@map.name)}
+			(#{map_type(@map)}), #{wrap_number(number_with_delimiter(@stats[:all]))} #{@stats[:all] == 1 ? "game" : "games"} played overall, #{wrap_number(number_with_delimiter(@stats[:day]))} in the last day, #{wrap_number(number_with_delimiter(@stats[:week]))} in the last week, #{wrap_number(number_with_delimiter(@stats[:month]))} in the last month.
+	.spacer
+		.w960.teamgraph.shadow
+			%h1.header Games played over the last month
+			#container
+	.spacer
+	.match-history.w960
+		%table.shadow#sortlist{:cellspacing => "1px"}
+			%tr.columns
+				%th#character0 Player
+				%th#bracket Bracket
+				%th#results Results
+				%th#points Points
+				%th#age Date
+			- @map.matches.all(:order => "played_on DESC", :limit => 25, :include => :character).each do |match|
+				- next if match.character.nil?
+				%tr{:class => "tblrow #{cycle("darkbg", "lightbg")}"}
+					%td.character0
+						= can_link_to(match.character.name, character_path(match.character.region, match.character.bnet_id, match.character.name))
+					%td.bracket= match_bracket(match)
+					%td.results= match_results(match)
+					%td.points= match_points(match)
+					%td.age= day_words_or_time(match.played_on)
+	= build_map_popularity(@map)
+	= javascript_include_tag("highcharts.src", :cache => "cache-charts", :lifetime => 1.month)
+	= javascript_include_tag("mappopularity", :cache => "cache-map-popularity", :lifetime => 1.month)
+	= javascript_include_tag("sorttable", :cache => "cache-sorttable", :lifetime => 1.month)
+	:javascript
+		var bracket = 1
+		setup_table()

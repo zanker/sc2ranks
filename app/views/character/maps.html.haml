@@ -1,0 +1,68 @@
+- @page_title = "#{@character.full_name}'s map stats"
+- @page_rss = tag(:link, :rel => "alternate", :title => "#{@character.full_name}'s match history RSS", :href => match_history_feed_url(@character.id, "rss"), :type => "application/rss+xml")
+- @page_atom = tag(:link, :rel => "alternate", :title => "#{@character.full_name}'s match history Atom", :href => match_history_feed_url(@character.id, "atom"), :type => "application/atom+xml")
+- cache("character/maps/#{@character.cache_key}/#{@offset}", :raw => true, :expires_in => 1.hours) do
+	.charprofile
+		= render :partial => "character_header", :locals => {:character => @character}
+		- if @character.matches.exists?
+			.spacer
+			.history.w960
+				%table.shadow{:cellspacing => "1px"}
+					%tr
+						%th.matchheader.toggleheader{:colspan => 5}
+							%div.toggleclick.dumbtoggle +
+							%label Last 25 matches
+					%tr.columns.invisible
+						%th.map Map
+						%th.bracket Bracket
+						%th.results Results
+						%th.points Points
+						%th.age Date
+					- @character.matches.all(:order => "played_on DESC", :limit => 25, :include => :map).each do |match|
+						%tr.invisible{:class => cycle("darkbg", "lightbg")}
+							%td.map
+								= link_to(match.map.name, map_info_path(match.map.id, parameterize(match.map.name)))
+							%td.bracket= match_bracket(match)
+							%td.results= match_results(match)
+							%td.points= match_points(match)
+							%td.age= day_words_or_time(match.played_on)
+		.spacer
+		
+		- if @map_list.length > 0
+			.spacer
+			.history.w960
+				= build_pagination(PAGINATION[:default], @total_maps, "paginate-top")
+				.clearb
+				%table.shadow{:cellspacing => "1px"}
+					%tr
+						%th{:colspan => 8}
+							Map stats
+					%tr.columns
+						%th.map Map
+						%th.total Total games
+						%th.wins Total wins
+						%th.losses Total losses
+						%th.age Last game
+					- @map_list.each do |map_stats|
+						%tr{:class => cycle("darkbg", "lightbg")}
+							%td.map
+								= can_link_to(map_stats.map.name, character_map_stats_path(@character.region, @character.bnet_id, @character.name, map_stats.map.id, parameterize(map_stats.map.name)))
+								(#{map_stats.map.is_blizzard.blank? ? "Custom" : "Blizzard"})
+							%td.total= number_with_delimiter(@map_totals[map_stats.map_id][:total])
+							%td.wins
+								= wrap_number(number_with_delimiter(@map_totals[map_stats.map_id][1] || 0))
+								= "(%0.1f%%)" % (@map_totals[map_stats.map_id][1].to_f / @map_totals[map_stats.map_id][:total] * 100)
+							%td.losses
+								= wrap_number(number_with_delimiter(@map_totals[map_stats.map_id][2] || 0))
+								= "(%0.1f%%)" % (@map_totals[map_stats.map_id][2].to_f / @map_totals[map_stats.map_id][:total] * 100)
+							%td.age= day_words_or_time(map_stats.played_on)
+				= build_pagination(PAGINATION[:default], @total_maps, "paginate-bottom")
+			.clearb
+		- else
+			.spacer
+			.leagues.w960
+				.message.shadow
+					No maps found, either you are viewing too large of an offset, or the player has no map data yet.
+
+	:javascript
+		$("#relative").html(relative_time(#{@character.updated_at.to_i}))

@@ -1,0 +1,36 @@
+- @page_title = "#{@custom.name} character management"
+- form_tag custom_division_update_chars_path, :method => :post do
+	= hidden_field_tag "id", @custom.id
+	.w960
+		.shadow.customdiv
+			%h1.header Managing division characters
+			.rowsep
+			- if @custom.allow_add.blank? && @custom.allow_remove.blank?
+				.desc.red Password needed to add or remove characters.
+			- elsif !@custom.allow_add.blank? && !@custom.allow_remove.blank?
+				.desc.green No password needed to manage characters.
+			- elsif !@custom.allow_add.blank?
+				.desc.green Can add characters without a password, but not remove.
+			- elsif !@custom.allow_remove.blank?
+				.desc.green Can remove characters without a password, but not add.
+			- if @custom.is_authed?(cookies)		
+				.rowsep
+					.desc.green Authorized, no password has to be entered.
+			- elsif @custom.allow_add.blank? || @custom.allow_remove.blank?
+				.row{:class => cycle("darkbg", "lightbg")}
+					%label Current password
+					= password_field_tag "division[auth_password]"
+				.row{:class => cycle("darkbg", "lightbg")}
+					%label Remember me?
+					= check_box_tag "division[remember]", 1, true
+			.row.nopad{:class => cycle("darkbg", "lightbg")}
+				= radio_button_tag "division[char_type]", "add", params[:division] && params[:division][:char_type] == "add" || true
+				Add character
+				= radio_button_tag "division[char_type]", "remove", params[:division] && params[:division][:char_type] == "remove"
+				Remove character
+			.rowsep
+			.desc.number Enter either battle.net or sc2rank urls to add or remove characters. One character per line. Characters can be from any region, custom divisions don't enforce a single region.
+			.row{:class => cycle("darkbg", "lightbg")}
+				= text_area_tag "division[urls]", params[:division] && params[:division][:urls]
+			.row{:class => cycle("darkbg", "lightbg")}
+				= submit_tag "Submit"

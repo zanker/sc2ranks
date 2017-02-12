@@ -1,0 +1,34 @@
+- @page_title = "#{@region ? REGION_NAMES[@region] : "Global"} achievement rankings#{@offset > 0 ? " (page #{(@offset / 100).ceil + 1})" : ""}"
+- cache(@page_hash, :raw => true, :expires_in => 30.minutes) do
+	.w960
+		= build_pagination(PAGINATION[:default], @total_chars, "paginate-top")
+		.clearb
+		%table.shadow.achievrank#sortlist{:cellspacing => "1px"}
+			%tr
+				%th#rank Rank
+				- unless @region
+					%th#region Region
+				%th#character0 Character
+				%th#achievements Achievement points
+				%th#points Teams
+				%th#age Last updated
+			- @rankings.each do |character|
+				%tr{:class => "tblrow #{cycle("darkbg", "lightbg")}"}
+					%td.rank= number_with_delimiter(character[:rank])
+					- unless @region
+						%td.region= link_to character.region.upcase, achievement_list_path(character.region)
+					%td.character0= link_to character.name, character_achievements_path(character.region, character.bnet_id, character.name)
+					%td.achievements= number_with_delimiter(character.achievement_points)
+					%td.points= number_with_delimiter(character.total_teams)
+					%td{:class => "age jstime #{character.updated_at.to_i}"}
+						= distance_in_words(Time.now.utc - character.updated_at)
+						ago
+			- if @rankings.length == 0
+				%tr.darkbg
+					%td{:colspan => 8} Cannot find any players.
+		= build_pagination(PAGINATION[:default], @total_chars, "paginate-bottom")
+		= javascript_include_tag("sorttable", :cache => "cache-sorttable", :lifetime => 1.month)
+		:javascript
+			var bracket = 1
+			setup_table()
+	.clearb

@@ -1,0 +1,48 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+patch_id = ARGV.first.strip.to_i
+
+puts "Creating patch snapshot as [#{patch_id}]"
+
+
+#if patch_id < 100
+#	return "Failed, patch_id cannot be below 100"
+#end
+
+table_name = "teams_patch_#{patch_id}"
+
+puts "Creating #{table_name}"
+
+# Copy the teams table
+ActiveRecord::Base.connection.execute("CREATE TABLE #{table_name} (LIKE teams)")
+
+puts "Removing old columns"
+
+# Remove columns we know we won't need
+#ActiveRecord::Base.connection.execute("ALTER TABLE #{table_name} DROP COLUMN id")
+ActiveRecord::Base.connection.execute("ALTER TABLE #{table_name} DROP COLUMN division_rank")
+ActiveRecord::Base.connection.execute("ALTER TABLE #{table_name} DROP COLUMN division_id")
+ActiveRecord::Base.connection.execute("ALTER TABLE #{table_name} DROP COLUMN joined_league")
+ActiveRecord::Base.connection.execute("ALTER TABLE #{table_name} DROP COLUMN last_game_at")
+ActiveRecord::Base.connection.execute("ALTER TABLE #{table_name} DROP COLUMN hash_id")
+ActiveRecord::Base.connection.execute("ALTER TABLE #{table_name} DROP COLUMN updated_at")
+
+puts "Copying data in"
+
+# Copy the teams table data
+ActiveRecord::Base.connection.execute("INSERT INTO #{table_name}(id, region, points, wins, losses, league, bracket, race_comp, is_random) SELECT id, region, points, wins, losses, league, bracket, race_comp, is_random FROM teams");
+
+
+# Create indexes
+ActiveRecord::Base.connection.execute("CREATE INDEX index_teams_p#{patch_id}_on_bracket ON #{table_name}(bracket)")
+ActiveRecord::Base.connection.execute("CREATE INDEX index_teams_p#{patch_id}_on_league ON #{table_name}(league)")
+ActiveRecord::Base.connection.execute("CREATE INDEX index_teams_p#{patch_id}_on_points ON #{table_name}(points)")
+ActiveRecord::Base.connection.execute("CREATE INDEX index_teams_p#{patch_id}_on_race_comp ON #{table_name}(race_comp)")
+ActiveRecord::Base.connection.execute("CREATE INDEX index_teams_p#{patch_id}_on_region ON #{table_name}(region)")
+
+puts "Finished!"
+

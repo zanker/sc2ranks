@@ -1,0 +1,27 @@
+- @page_title = "#{@division["name"]} rankings"
+- cache(@page_hash, :raw => true, :expires_in => 10.minutes) do
+	.w960
+		.shadow.divisioninfo
+			= make_badge(LEAGUES[@division["league"]], 4, "20x21")
+			%span.bracket= division_name(@division)
+			#{@division["name"]} (#{@division["max_points"]} - #{@division["min_points"]}).
+			- if @division["league"] >= LEAGUES["master"]
+				= "#{wrap_number("%d")} average games played, #{wrap_number("%.2f%")} average ratio." % [@division["average_games"], @division["average_wins"] * 100]
+			- else
+				= "#{wrap_number("%d")} average games played." % [@division["average_games"]]
+	.spacer
+	.w960
+		%table.shadow.rankings#sortlist{:cellspacing => "1px"}
+			%tr
+				= build_columns(:region => @division["region"], :bracket => @division["bracket"], :division => true, :is_random => @division["is_random"], :league => @division["league"])
+			- if @rankings.length == 0
+				%tr.darkbg
+					%td{:colspan => 9} Cannot find any players, this seems to be a dead division.
+			- else
+				= build_rows(@rankings, :region => @division["region"], :bracket => @division["bracket"], :division => true, :is_random => @division["is_random"], :league => @division["league"])
+
+		= javascript_include_tag("sorttable", :cache => "cache-sorttable", :lifetime => 1.month)
+		:javascript
+			var bracket = #{@division["bracket"]}
+			setup_table()
+	.clearb

@@ -1,0 +1,73 @@
+- @page_title = "Database data"
+- cache("database/dump/datas", :raw => true, :expires_in => 1.day) do
+	.w960
+		.shadow.api
+			%h1.header Info
+			.rowsep
+			%p
+				The below files are dumps from SC2Ranks team tables. These are generated daily and only contain information you could use for statistics. You will not be able to get any identifying information, such as battle.net ids, team names, team ids and so on.
+			%p
+				As with the API, there are only two restrictions:
+			%p
+				You cannot use the data in mobile applications (websites with mobile HTML versions not included).
+			%p
+				The data is given freely, if you do use it credit the source!
+				
+
+		.spacer
+		.shadow.api
+			%h1.header Fields
+			.rowsep
+			%p
+				These are direct database dumps, so they are missing the normal mappings you see on the APIs. The mappings are below:
+			%p
+				League: 0 = Bronze, 1 = Silver, 2 = Gold, 3 = Platinum, 4 = Diamond
+			%p
+				Is random: Indicates that it's a random bracket, the player queued with less than the full number and had random teammates
+			%p
+				Race comp: 0 = Zerg, 1 = Protoss, 2 = Terran, 3 = Random
+			%p
+				For 2v2, 3v3 or 4v4 race_comp is separated with "/". For example "2/1/0" means a team has a Terran, Protoss and Zerg on it.
+
+		.spacer
+		.shadow.api
+			%h1.header Division changes
+			.rowsep
+			%p
+				Division changes, contains both promotions and demotions, as well as the teams old and new wins, losses and points. 
+			%p
+				#{link_to "division-changes.csv.gz", "stats/division-changes.csv.gz"} - Last modified: #{File.mtime("#{RAILS_ROOT}/public/stats/division-changes.csv.gz").utc}
+
+		.spacer
+		.shadow.api
+			%h1.header Top 5,000 1v1 diamond
+			.rowsep
+			%p
+				Top 5,000 players in 1v1 diamond from all regions
+			%p
+				#{link_to "top5000.csv.gz", "stats/top5000.csv.gz"} - Last modified: #{File.mtime("#{RAILS_ROOT}/public/stats/top5000.csv.gz").utc}
+
+		- REGIONS.each do |region|
+			- next if region == "cn"
+			.spacer
+			.shadow.api
+				%h1.header #{region.upcase} team data
+				.rowsep
+				%p
+					Team data for #{REGION_NAMES[region]}, each league includes data for 1v1, 
+				%p
+					- LEAGUE_LIST.each do |league|
+						- next if league >= LEAGUES["master"]
+						- BRACKETS.each do |bracket|
+							%p
+								#{link_to "#{LEAGUE_NAMES[league]} #{bracket}v#{bracket}", "stats/teams-#{region}-#{LEAGUES[league]}-#{bracket}v#{bracket}.csv.gz"} - Last modified: #{File.mtime("#{RAILS_ROOT}/public/stats/teams-#{region}-#{LEAGUES[league]}-#{bracket}v#{bracket}.csv.gz").utc}
+							- if bracket > 1
+								%p
+									#{link_to "#{LEAGUE_NAMES[league]} #{bracket}v#{bracket} (random)", "stats/teams-#{region}-#{LEAGUES[league]}-#{bracket}v#{bracket}-random.csv.gz"} - Last modified: #{File.mtime("#{RAILS_ROOT}/public/stats/teams-#{region}-#{LEAGUES[league]}-#{bracket}v#{bracket}-random.csv.gz").utc}
+					
+
+		
+	
+			
+
+

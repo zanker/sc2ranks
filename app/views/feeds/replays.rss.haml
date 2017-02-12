@@ -1,0 +1,15 @@
+!!! XML 
+%rss{:version => "2.0"} 
+	%channel 
+		%title Last 25 replays for #{@character.full_name}
+		%link= character_replay_url(@character.region, @character.bnet_id, @character.name)
+		%description Shows the last 25 replays for #{@character.name} on the #{REGION_NAMES[@character.region]} servers.
+		%pubDate= @character.updated_at
+		
+		- @replays.each do |replay|
+			%item
+				%title= feed_replay_name(replay)
+				%description= feed_replay_players(replay)
+				%link= replay.site_url
+				%guid= replay.id
+				%pubDate= replay.played_on

@@ -1,0 +1,15 @@
+!!! XML 
+%rss{:version => "2.0"} 
+	%channel 
+		%title #{teammate_names(@team)}'s team history
+		%link= team_url(@team.id)
+		%description Shows the last 25 points and league changes for #{teammate_names(@team)}'s team.
+		%pubDate= @records.last && @records.last[:created_at] || @team.updated_at
+		
+		- last_history = nil
+		- @records.each do |history|
+			%item
+				%title= history_text(history, last_history)
+				%guid= history[:id]
+				%pubDate= history[:created_at]
+			- last_history = history	

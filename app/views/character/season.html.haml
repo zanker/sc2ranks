@@ -1,0 +1,40 @@
+- @page_title = "#{@character.full_name}'s season #{params[:season].to_i} teams"
+- cache("season/#{params[:season]}/#{@character.id}", :raw => true, :expires_in => 12.hours) do
+	.charprofile
+		= render :partial => "character_header", :locals => {:character => @character, :team_stats => @team_stats}
+		.spacer
+		.w960
+			.divisioninfo.shadow
+				You are viewing data from season #{params[:season].to_i}. Click "Active" to view the teams current stats.
+		.spacer
+		.w960
+			%table.shadow#sortlist.seasonlist{:cellspacing => 1}
+				%tr
+					%th.view Current
+					%th.bracket Bracket
+					%th.league League
+					%th.points Points
+					%th.wins Wins
+					%th.losses Losses
+					%th.worldrank World Rank
+					%th.regionrank Region Rank
+				- @teams.each do |team|
+					%tr{:class => cycle("lightbg", "darkbg")}
+						%td.view
+							- if @active_ids[team.id]
+								= link_to("Active", team_path(team.id), :class => "green")
+							- else
+								%span.red Inactive
+						%td.bracket
+							- if team.is_random
+								R #{team.bracket}v#{team.bracket}
+							- else
+								#{team.bracket}v#{team.bracket}
+						%td.league
+							= badge_by_rank(team.world_rank || 0, team.league, "18x19")
+							%span= LEAGUES[team.league].humanize
+						%td.points= number_with_delimiter(team.points)
+						%td.wins= number_with_delimiter(team.wins)
+						%td.losses= number_with_delimiter(team.losses)
+						%td.worldrank= number_with_delimiter(team.world_rank || 0)
+						%td.regionrank= number_with_delimiter(team.region_rank || 0)

@@ -1,0 +1,140 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "cgi"
+
+shutdown = nil
+trap('TERM') { shutdown = true }
+trap('INT') { shutdown = true }
+
+
+puts "Updating every grandmaster division"
+
+start_time = Time.now.to_f
+@url = nil
+
+cond = Rails.cache.read("maint/checks")
+cond = cond.blank? ? "" : "AND #{cond}"
+
+require "#{RAILS_ROOT}/script/current_season.rb"
+
+
+division_list = {}
+Division.all(:select => "id, bnet_id", :conditions => ["league = ? AND bracket = ? AND is_random = ? AND season = ? AND expansion = ? #{cond}", LEAGUES["grandmaster"], 1, false, current_season, CURRENT_EXPANSION]).each do |division|
+	team = Team.first(:conditions => ["division_id = ?", division.id])
+	next unless team
+	division_list[division.bnet_id.to_i] = team.first_character
+
+        # KR and TW have 2 Grandmaster leagues, so we force it to be 1 still but update against 2
+        if division.region == "fea"
+                character = Character.first(:conditions => ["characters.region != ? AND divisions.bnet_id = ?", team.first_character.region, division.bnet_id.to_i], :joins => "LEFT JOIN team_characters ON team_characters.character_id = characters.id LEFT JOIN teams ON teams.id = team_characters.team_id LEFT JOIN divisions ON divisions.id=teams.division_id")
+                division_list[division.bnet_id.to_s] = character
+        end
+end
+
+puts "Ended up with #{division_list.length} unique divisions"
+
+def pull_division(region, char_bnet_id, char_name, division_bnet_id)
+	@url = "profile/#{char_bnet_id}/#{LOCALE_IDS[region]}/#{URI.escape(char_name)}/ladder/#{division_bnet_id}"
+	Armory::Node.cron_pull(region, @url)
+end
+
+pull_time = Time.now.to_f
+retries = 0
+total_requests = 0
+division_list.each do |division_id, character|
+	break if ( ( Time.now.to_f - start_time ) >= 5.minutes ) || shutdown
+	next unless character
+
+	if retries > 3
+		puts "Hit limit on retries, going to next one."
+		retries = 0
+		next
+	elsif retries > 0
+		puts "Retrying #{retries}"
+	else
+		puts "Updating division #{division_id}, #{character.region.upcase}-#{character.name} ##{character.bnet_id}"
+	end
+	
+	id_blacklist = []
+	begin
+		id_blacklist.push(character.id)
+		
+		total_requests += 1
+		content = pull_division(character.region, character.bnet_id, character.name, division_id.to_i)
+	rescue OpenURI::HTTPError => e
+		puts e
+		puts @url
+
+		# Maintenance
+		next if e.message == "500"
+		
+		# Not found, find someone else
+		if e.message == "404"
+			puts "Cannot find #{character.region.upcase}-#{character.name} ##{character.bnet_id}, trying someone else"
+			
+			character = Character.first(:conditions => ["characters.id NOT IN (?) AND characters.region = ? AND divisions.bnet_id = ?", id_blacklist, character.region, division_id.to_i], :joins => "LEFT JOIN team_characters ON team_characters.character_id = characters.id LEFT JOIN teams ON teams.id = team_characters.team_id LEFT JOIN divisions ON divisions.id=teams.division_id")
+			
+			if character.nil?
+				puts "Cannot find replacement"
+				next
+			end
+			
+			puts "Found #{character.region.upcase}-#{character.name} ##{character.bnet_id}"
+		end
+		
+		retries += 1
+		retry if retries <= 3
+	# Catch all
+	rescue Exception => e
+		puts e
+		puts @url
+		
+		retries += 1
+		retry if retries <= 3
+	end
+	
+	# Do our basic error checking
+	if content.blank?
+		puts "No content response"
+		next
+	end
+	
+	if content.match(/maintenancelogo/) || content.match(/thermaplugg/) || content.match(/error\-header/)
+		puts "Got a maintenance response"
+		next
+	end
+	
+	doc = Nokogiri::HTML(content)
+	if doc.blank?
+		puts "Nokogiri failed to parse"
+		next
+	end
+	
+	begin
+		fail_tries = 0
+		while fail_tries <= 5
+			status = Jobs::DivisionChars.parse({:region => character.region, :char_bnet_id => character.bnet_id, :char_name => character.name, :bnet_id => division_id.to_i, :block_queues => true, :league => LEAGUES["grandmaster"]}, doc, content)
+			if status == "corrupted"
+				puts "Corrupted data (#{fail_tries})"
+				fail_tries += 1
+			else
+				break
+			end
+		end
+	rescue Exception => e
+		puts e
+		puts @url
+	end
+	
+	retries = 0
+end
+
+# Force update
+Rails.cache.write("expire/#{LEAGUES["grandmaster"]}", Time.now.to_i.to_s, :raw => true, :expires_in => 30.minutes)
+
+puts "Finished in %.2f minutes, total %d divisions with an of average %.2f seconds" % [(Time.now.to_f - start_time) / 60, total_requests, (Time.now.to_f - pull_time) / total_requests ]
+

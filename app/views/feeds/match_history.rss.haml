@@ -1,0 +1,13 @@
+!!! XML 
+%rss{:version => "2.0"} 
+	%channel 
+		%title Last 25 matches for #{@character.full_name}
+		%link= character_url(@character.region, @character.bnet_id, @character.name)
+		%description Shows the last 25 matches played on Battle.NET by #{@character.name} on the #{REGION_NAMES[@character.region]} servers.
+		%pubDate= @character.updated_at
+		
+		- @matches.each do |match|
+			%item
+				%title= feed_map_name(match)
+				%guid= match.id
+				%pubDate= match.played_on

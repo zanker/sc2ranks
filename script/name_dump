@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+names = {}
+
+Vod.all(:conditions => ["player_one_id IS NULL OR player_two_id IS NULL"]).each do |video|
+	names[video.player_one] = true unless video.player_one.blank?
+	names[video.player_two] = true unless video.player_two.blank?
+end
+
+names.keys.each do |name|
+	found = Character.count(:conditions => ["LOWER(name) = ?", name.downcase])
+	if found == 1
+		character = Character.first(:conditions => ["LOWER(name) = ?", name.downcase])
+		puts "#{name}: Found #{character.region} ##{character.bnet_id}"
+	elsif found > 1
+		puts "#{name}: Found #{found} profiles"
+	else
+		puts "#{name}: No profile found"
+	end
+end
+

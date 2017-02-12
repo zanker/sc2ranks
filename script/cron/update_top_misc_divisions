@@ -1,0 +1,116 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "cgi"
+
+require "#{RAILS_ROOT}/script/current_season.rb";
+TOP_LIMIT = 50
+puts "Updating top #{TOP_LIMIT} players in every bracket, except masters"
+
+start_time = Time.now.to_f
+
+division_list = {}
+@url = nil
+
+conditions = Rails.cache.read("maint/checks")
+conditions = conditions.blank? ? "" : " AND #{conditions}"
+
+LEAGUE_LIST.each do |league|
+	BRACKETS.each do |bracket|
+		next if league >= LEAGUES["master"]
+		Team.all(:select => "id, division_id", :conditions => ["league = ? AND bracket = ? AND is_random = ? AND division_id IS NOT NULL AND season = ? #{conditions}", league, bracket, false, current_season], :order => "points DESC", :limit => TOP_LIMIT, :include => [:division, :first_character]).each do |team|
+			division_list[team.division.bnet_id] = team.first_character if team.division
+		end
+		
+		if bracket > 1
+			Team.all(:select => "id, division_id", :conditions => ["league = ? AND bracket = ? AND is_random = ? AND division_id IS NOT NULL AND season = ?#{conditions}", league, bracket, true, current_season], :order => "points DESC", :limit => TOP_LIMIT, :include => [:division, :first_character]).each do |team|
+				division_list[team.division.bnet_id] = team.first_character if team.division
+			end
+		end
+	end
+end
+
+puts "Ended up with #{division_list.length} unique divisions"
+
+def pull_division(region, char_bnet_id, char_name, division_bnet_id)
+	@url = "profile/#{char_bnet_id}/#{LOCALE_IDS[region]}/#{URI.escape(char_name)}/ladder/#{division_bnet_id}"
+	Armory::Node.cron_pull(region, @url)
+end
+
+pull_time = Time.now.to_f
+retries = 0
+total_requests = 0
+division_list.each do |division_id, character|
+	break if ( ( Time.now.to_f - start_time ) >= 90.minutes )
+
+	if retries > 3
+		puts "Hit limit on retries, going to next one."
+		#Notifier.deliver_alert("HIT RETRY LIMIT ON TOP UPDATE", "#{division_id} #{character.to_json}")
+		retries = 0
+		next
+	elsif retries > 0
+		puts "Retrying #{retries}"
+	else
+		puts "Updating division #{division_id}, #{character.region.upcase}-#{character.name} ##{character.bnet_id}"
+	end
+
+	begin
+		total_requests += 1
+		content = pull_division(character.region, character.bnet_id, character.name, division_id)
+	rescue Interrupt => e
+		puts "Interrupted"
+		break
+	rescue OpenURI::HTTPError => e
+		puts e
+		puts @url
+		
+		# Maintenance
+		next if e.message == "500"
+		
+		retries += 1
+		retry if retries <= 3
+	# Catch all
+	rescue Exception => e
+		puts e
+		puts @url
+		
+		retries += 1
+		retry if retries <= 3
+	end
+	
+	# Do our basic error checking
+	if content.blank?
+		puts "No content response"
+		next
+	end
+	
+	if content.match(/maintenancelogo/) || content.match(/thermaplugg/) || content.match(/error\-header/)
+		puts "Got a maintenance response"
+		next
+	end
+	
+	doc = Nokogiri::HTML(content)
+	if doc.blank?
+		puts "Nokogiri failed to parse"
+		next
+	end
+	
+	fail_tries = 0
+	while fail_tries <= 5
+		status = Jobs::DivisionChars.parse({:region => character.region, :char_bnet_id => character.bnet_id, :char_name => character.name, :bnet_id => division_id, :block_queues => true}, doc, content)
+		if status == "corrupted"
+			puts "Corrupted data"
+			fail_tries += 1
+		else
+			break
+		end
+	end
+	
+	retries = 0
+end
+
+puts "Finished in %.2f minutes, total %d divisions with an of average %.2f seconds" % [(Time.now.to_f - start_time) / 60, total_requests, (Time.now.to_f - pull_time) / total_requests ]
+

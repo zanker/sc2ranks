@@ -1,0 +1,97 @@
+.w960
+	- if character.flag
+		.paginate-top{:class => "flag#{character.flag}"}
+			- if character.flag == 1
+				Blizzard Forum MVP Profile
+			- elsif character.flag == 2
+				Pro-Gamer Profile
+	
+	- seasons_skipped = character.seasons_skipped.to_s.split(",")	
+	.paginate-top.paginate-right.seasons
+		Season
+		- (1..character.season).each do |i|
+			- next if i == 5
+			- next if seasons_skipped.include?(i.to_s)
+			- if i != character.season
+				= can_link_to_unless(i, character_season_path(character.region, character.bnet_id, character.name, i))
+			- else
+				= can_link_to_unless(i, character_path(character.region, character.bnet_id, character.name))
+	.clearb
+	.profile.shadow
+		- if character.portrait_id
+			.portrait
+				%span{:style => "background: url(\"/images/#{character.portrait.image_name(:medium)}\") no-repeat scroll #{character.portrait.sprite_location(:medium)} transparent; width: #{character.portrait.image_size(:medium)}px; height: #{character.portrait.image_size(:medium)}px;"}
+		.misc-container
+			.name
+				-# if character.character_code
+				-#= link_to(character.name, battlenet_url(character)) << content_tag(:span, "##{character.character_code}", :class => "character-code")
+				-# else
+				= link_to(character.full_name, battlenet_url(character))
+				(#{SHORT_REGIONS[character.rank_region]})
+				.rename
+					= link_to("Rename", "#", :id => "rename_character", :onclick => "javascript:rename_character(#{character.id});")
+			.teams.secondary= can_link_to_unless("View teams", character_path(character.region, character.bnet_id, character.name))
+			.maps.secondary= can_link_to_unless("View maps & history", character_map_path(character.region, character.bnet_id, character.name))
+			- if @character.replays.exists? or Vod.exists?(["player_one_id = ? OR player_two_id = ?", @character.id, @character.id])
+				.points.secondary= can_link_to_unless("View achievements", character_achievements_path(character.region, character.bnet_id, character.name))
+				.replays.secondary
+					View
+					- if @character.replays.exists?
+						= can_link_to_unless("replays", character_replay_path(character.region, character.bnet_id, character.name))
+					- if Vod.exists?(["player_one_id = ? OR player_two_id = ?", @character.id, @character.id]) and @character.replays.exists?
+						\/
+					- if Vod.exists?(["player_one_id = ? OR player_two_id = ?", @character.id, @character.id])
+						= can_link_to_unless("vods", character_vod_path(character.region, character.bnet_id, character.name))
+
+			- else
+				.replays.secondary= can_link_to_unless("View achievements", character_achievements_path(character.region, character.bnet_id, character.name))
+		
+		.achieve-container
+			.achievements
+				#{image_tag("achievement-large.png", :size => "14x16")} Achievements (#{wrap_number(number_with_delimiter(character.achievement_points))} points)
+			.world
+				#{image_tag("achievement-large.png", :size => "14x16")} World rank:
+				- if character.achievement_points and character.achievement_points > 0
+					= wrap_number("#" << number_with_delimiter(character.achieve_world_rank))
+					of
+					= wrap_number(number_with_delimiter(character.achieve_world_competition))
+				- else
+					\---
+			.region
+				#{image_tag("achievement-large.png", :size => "14x16")} Region rank:
+				- if character.achievement_points and character.achievement_points > 0
+					= wrap_number("#" << number_with_delimiter(character.achieve_region_rank))
+					of
+					= wrap_number(number_with_delimiter(character.achieve_region_competition))
+				- else
+					\---
+		
+		.updated-container{:class => character.portrait_id.nil? && "noportrait" || ""}
+			.social
+				%a{:href => "http://twitter.com/share?url=#{CGI.escape(request.url)}&via=sc2ranks", "data-count" => "none", :target => "_blank", :onclick => "javascript:social_popup(this, 'Share this on Twitter', 450, 600); return false;"}
+					= image_tag("twitter.png")
+					Tweet
+				&bull;
+				%a{:href => "http://www.facebook.com/sharer.php?u=#{CGI.escape(request.url)}", :target => "_blank", :onclick => "javascript:social_popup(this, 'Facebook', 450, 600); return false;"}
+					= image_tag("facebook.png")
+					Share
+				&bull;
+				#{"<g:plusone size='small' href='#{CGI.escape(request.url)}'></g:plusone>"}	
+				-# if cookies[:bm] && cookies[:bm].match(/,#{character.id},|#{character.id}$/)
+				-#	= link_to("Unsave", "javascript:unbookmark(#{character.id})")
+				-# else
+				-#	= link_to("Save profile", "javascript:bookmark(#{character.id})")
+			.lastupdated
+				.time
+					Last updated:
+					%span#relative= character.updated_at.to_s
+				.refresh
+					- if Armory::Job.exists?(["class_name = ? AND bnet_id = ? AND region = ?", "Jobs::Profile", character.bnet_id, character.region])
+						%span.green Profile being refreshed...
+					- elsif character.updated_at >= 6.hours.ago
+						%span.green Refreshed in the last 6 hours
+					- else
+						= link_to("[Queue refresh]", "javascript:;", :onclick => "location.href='#{character_refresh_path(character.region, character.bnet_id, character.name, :previous => params[:action])}'")
+		.clearb
+:javascript
+	$("#relative").html(relative_time(#{character.updated_at.to_i}))

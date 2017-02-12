@@ -1,0 +1,47 @@
+- @page_title = "Grandmaster History#{@offset > 0 ? " (page #{(@offset / 100).ceil + 1})" : ""}"
+-#			#DivisionChanges.create(:wins => data[:wins], :losses => data[:losses], :team_id => team_cache[hash_id].id, :points => data[:points], :new_league => division.league, :old_league => team_cache[hash_id].league, :old_wins => team_cache[hash_id].wins, :old_losses => team_cache[hash_id].losses, :old_points => team_cache[hash_id].points, :created_at => Time.now.utc)
+- cache(@page_hash, :raw => true, :expires_in => 2.hours) do
+	.w960
+		= build_pagination(200, @total_changes, "paginate-top")
+		.clearb
+		%table.shadow.rankings#sortlist{:cellspacing => "1px"}
+			%tr
+				%th#region Region
+				%th.character#character0 Name
+				%th#newleague New League
+				%th#newpoints New Points
+				%th#oldleague Old League
+				%th#oldpoints Old Points
+				%th#updated_at Age
+			- if @changes.length == 0
+				%tr.darkbg
+					%td{:colspan => 10} Cannot find any players.
+			- else
+				- @changes.each do |change|
+					- next if change.team.nil?
+					%tr{:class => "tblrow #{cycle("darkbg", "lightbg")}"}
+						- team_char = change.team.team_characters.first
+						- character = team_char.character
+						%td.region= change.team.region.upcase
+						%td{:class => "character1 character"}
+							= image_tag("#{RACES[team_char.fav_race] || "unknown"}.png", :class => RACES[team_char.fav_race])
+							= can_link_to(character.name, character_path(character.region, character.bnet_id, character.name))
+						%td.newleague
+							= make_badge(LEAGUES[change.new_league], 1, "18x19")
+							%span= LEAGUE_NAMES[change.new_league]
+						%td.newpoints= number_with_delimiter(change.points)
+						
+						%td.oldleague
+							= make_badge(LEAGUES[change.old_league], 1, "18x19")
+							%span= LEAGUE_NAMES[change.old_league]
+						
+						%td.oldpoints= number_with_delimiter(change.old_points)
+						%td{:class => "age shortjstime #{change.created_at.utc.to_i}"}= short_relative_time(change.created_at)
+		= build_pagination(200, @total_changes, "paginate-bottom")
+
+		= javascript_include_tag("sorttable", :cache => "cache-sorttable", :lifetime => 1.month)
+		:javascript
+			var bracket = #{@bracket}
+			setup_table()
+			load_default_search()
+	.clearb

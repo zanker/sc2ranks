@@ -1,0 +1,44 @@
+- @page_title = "#{@character.full_name}'s vods"
+- cache("character/vods/#{@character.cache_key}/#{@offset}", :raw => true, :expires_in => 1.hours) do
+	.charprofile
+		= render :partial => "character_header", :locals => {:character => @character}
+		.spacer
+		
+		- if @vod_list.length > 0
+			.spacer
+			.vods.w960
+				= build_pagination(PAGINATION[:default], @total_vods, "paginate-top")
+				.clearb
+				%table.shadow{:cellspacing => "1px"}
+					%tr.topcolumns
+						%th.view View
+						%th.players Team 1
+						%th.players Team 2
+						%th.caster Caster
+						%th.round Event
+						%th.bestof Type
+					- @vod_list.each do |vod|
+						%tr{:class => cycle("darkbg", "lightbg")}
+							%td.view= link_to("View", vod.series_url)
+							= vod_players(vod)
+							%td.caster
+								= link_to(vod.caster, vod.caster_url, :class => :nolink)
+							%td.round
+								= link_to(vod.round, vod.event_url, :class => :nolink)
+							%td.bestof
+								- if vod.best_of_type == 0
+									%span.nolink= "Game #{vod.best_of}"
+								- elsif vod.best_of_type == 2 or vod.best_of_type == 1
+									%span.nolink= "Best of #{vod.best_of}"
+								- else
+									Unknown
+				= build_pagination(PAGINATION[:default], @total_vods, "paginate-bottom")
+			.clearb
+		- else
+			.spacer
+			.leagues.w960
+				.message.shadow
+					No vods found.
+
+	:javascript
+		$("#relative").html(relative_time(#{@character.updated_at.to_i}))

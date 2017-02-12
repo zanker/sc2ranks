@@ -1,0 +1,27 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+has_data = true
+offset = 0
+id = 0
+while( has_data ) do
+	has_data = nil
+	
+	TeamCharacter.all(:select => "team_characters.id", :joins => "LEFT JOIN teams ON teams.id=team_characters.team_id LEFT JOIN characters ON characters.id=team_characters.character_id", :conditions => ["teams.id is null OR characters.id is null"], :limit => 10000, :offset => offset).each do |team_char|
+		has_data = true
+		
+		team_char.delete
+		puts "[#{id}] removed, #{team_char.id}"
+		id += 1
+	end
+	
+	offset += 10000
+end
+
+
+
+
+

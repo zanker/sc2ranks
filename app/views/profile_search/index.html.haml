@@ -1,0 +1,35 @@
+- @page_title = "Profile search for #{params[:name]}"
+- cache(@page_hash, :raw => true, :expires_in => 30.minutes) do
+	.w960
+		%table.shadow.search#sortlist{:cellspacing => "1px"}
+			%tr
+				%th#region Region
+				%th#character0 Character
+				%th#points Points
+				%th#wins Wins
+				%th#losses Losses
+				%th#ratio Ratio
+				%th#division Division
+				%th#age Last updated
+			- if @char_list.length > 0
+				- @char_list.each do |character|
+					%tr{:class => "tblrow #{cycle("darkbg", "lightbg")}"}
+						%td.region= character.region.upcase
+						%td.character0= can_link_to(character.full_name, character_path(character.region, character.bnet_id, character.name))
+						%td.points
+							= image_tag("#{LEAGUES[character[:team].league]}-small.png", :size => "16x18", :class => "league")
+							%span.number= number_with_delimiter(character[:team].points)
+							%span (#{character[:team].bracket}v#{character[:team].bracket})
+						%td.wins.green= number_with_delimiter(character[:team].wins)
+						%td.losses.red= number_with_delimiter(character[:team].losses)
+						%td.ratio= "%.2f%%" % [character[:team].win_ratio * 100]
+						%td.division
+							= can_link_to(character[:team].division.simple_name, rank_division_path(character[:team].division.id))
+							(##{character[:team].division_rank})
+						%td{:class => "age jstime #{character.updated_at.to_i}"}
+							= distance_in_words(Time.now.utc - character.updated_at)
+							ago
+			- else
+				%tr{:class => "darkbg"}
+					%td{:colspan => 8}
+						No profile found.

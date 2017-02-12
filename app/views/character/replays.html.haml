@@ -1,0 +1,39 @@
+- @page_title = "#{@character.name}'s replays"
+- @page_rss = tag(:link, :rel => "alternate", :title => "#{@character.name}'s replays RSS", :href => replay_feed_url(@character.id, "rss"), :type => "application/rss+xml")
+- @page_atom = tag(:link, :rel => "alternate", :title => "#{@character.name}'s replays Atom", :href => replay_feed_url(@character.id, "atom"), :type => "application/atom+xml")
+- cache("character/replays/#{@character.cache_key}/#{@offset}", :raw => true, :expires_in => 1.hours) do
+	.charprofile
+		= render :partial => "character_header", :locals => {:character => @character}
+		.spacer
+		
+		- if @replay_list.length > 0
+			.spacer
+			.replays.w960
+				= build_pagination(PAGINATION[:default], @total_replays, "paginate-top")
+				.clearb
+				%table.shadow{:cellspacing => "1px"}
+					%tr.topcolumns
+						%th.view View
+						%th.players Team 1
+						%th.players Team 2
+						%th.rmap Map
+						%th.rbracket Bracket
+						%th.age.rage Date
+					- @replay_list.each do |replay|
+						%tr{:class => cycle("darkbg", "lightbg")}
+							%td.view= link_to("View", replay.site_url)
+							= replay_players(replay)
+							%td.rmap
+								= can_link_to(replay.map.name, map_info_path(replay.map.id, parameterize(replay.map.name)))
+							%td.rbracket= replay_bracket(replay.bracket)
+							%td.age.rage= day_words_or_time(replay.played_on)
+				= build_pagination(PAGINATION[:default], @total_replays, "paginate-bottom")
+			.clearb
+		- else
+			.spacer
+			.leagues.w960
+				.message.shadow
+					No replays found, if a replay was recently uploaded to a supported site, it can take up to 6 hours to show up.
+
+	:javascript
+		$("#relative").html(relative_time(#{@character.updated_at.to_i}))

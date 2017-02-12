@@ -1,0 +1,24 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+f = File.open("./script/names.txt", "r")
+
+f.read.split("\n").each do |line|
+	match = line.match(/(.+): ([a-z]{2})\/([0-9]+)/)
+	if match
+		character = Character.first(:conditions => {:region => match[2], :bnet_id => match[3]})
+		unless character
+			puts "#{line} (Cannot find)"
+			next
+		end
+		
+		puts "#{line} (Associated #{character.id})"
+		Vod.update_all(["player_one_id = ?", character.id], ["LOWER(player_one) = ? OR player_one = ?", match[1].downcase, match[1]])
+		Vod.update_all(["player_two_id = ?", character.id], ["LOWER(player_two) = ? OR player_two = ?", match[1].downcase, match[1]])
+	end
+end
+
+f.close
+puts "Done"

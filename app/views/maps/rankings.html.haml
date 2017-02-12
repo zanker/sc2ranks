@@ -1,0 +1,37 @@
+- @page_title = "#{@region ? REGION_NAMES[@region] : "Global"} map rankings#{@offset > 0 ? " (page #{(@offset / 100).ceil + 1})" : ""}"
+- cache(@page_hash, :raw => true, :expires_in => 1.hour) do
+	.w960
+		= build_pagination(PAGINATION[:default], @total_maps, "paginate-top")
+		.clearb
+		%table.shadow.maplist#sortlist{:cellspacing => "1px"}
+			%tr
+				%th#rank Rank
+				- unless @region
+					%th#region Region
+				%th#character0.mapname Map
+				%th#maptype Type
+				%th#points Games played
+				%th#age Last game
+			- @rankings.each do |map|
+				%tr{:class => "tblrow #{cycle("darkbg", "lightbg")}"}
+					%td.rank= number_with_delimiter(map[:rank])
+					- unless @region
+						%td.region= map.region.upcase
+					%td.character0.mapname
+						= can_link_to(map.name, map_info_path(map.id, parameterize(map.name)))
+					%td.maptype= map_type(map)
+					%td.points= map.overall_stat ? number_with_delimiter(map.overall_stat.total_games) : 0
+					- unless map.last_game.nil?
+						%td.age{:class => "jstime #{map.last_game.to_i}"}
+							= day_words_or_time(map.last_game)
+					- else
+						%td.age ----
+			- if @rankings.length == 0
+				%tr.darkbg
+					%td{:colspan => 8} Cannot find any maps.
+		= build_pagination(PAGINATION[:default], @total_maps, "paginate-bottom")
+		= javascript_include_tag("sorttable", :cache => "cache-sorttable", :lifetime => 1.month)
+		:javascript
+			var bracket = 1
+			setup_table()
+	.clearb

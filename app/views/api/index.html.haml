@@ -1,0 +1,302 @@
+- @page_title = "API documentation"
+.w960
+	.shadow.api
+		%h1.header API documentation
+		.rowsep
+		%p
+			APIs are provided to make getting data out of SC2Ranks easier. While not everything will be exposed, you are welcome to email #{link_to "shadow@sc2ranks.com", "mailto:shadow@sc2ranks.com"} if you have a request.
+		%p
+			Characters can either be found by passing "name!battle.net id" to use the battle.net id you see on your battle.net profile, or through "name$character code" to use the character code.
+		%p
+			Characters that aren't in the database yet will be queued if a battle.net id is passed. Character codes will not auto queue as you cannot go from character code -> battle.net profile. You should avoid using character codes when possible.
+		%p
+			Valid regions are: am, eu, fae, sea, cn
+		%p
+			All APIs support XML or JSON data, append ".json" or ".xml" to change the format returned. For JSONP pass "?jsonp=foobar" to get a function call for 'foobar' wrapped around the JSON data. Requests also have ETags attached to them, you reduce the data parsing necessary if you use ETags and don't reparse if you see 304 Not Modified.
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header Expansions
+		.rowsep
+		%p Expansions are returned when a team is returned and are: #{EXPANSIONS.map {|k, v| "#{v} = #{k}"}.join(", ")}
+		%p The /api/custom, /api/char/team and /api/mass/teams APIs will always return teams for the latest expansion, unless you override it with "expansion=0" which would return only WoL teams.
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header.red API restrictions
+		.rowsep
+		%p
+			You must link back to SC2 Rank profiles, or to sc2ranks.com depending on how you are using data.
+		%p
+			You cannot use the data in mobile applications (websites with mobile HTML versions not included), without permission. We're not looking at adding new mobile apps for iOS or Android at this time.
+		%p
+			Cache your requests, you should not be pulling from SC2Ranks every time someone visits a page with the data.
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header.red Character codes
+		.rowsep
+		%p
+			Blizzard does not provide character codes on battle.net anymore, while some characters will still work with a character code, you should not rely on it. You can do more specific character searching by division, team points and so on with the "Profile Search" API below.
+
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header API usage / Application keys
+		.rowsep
+		%p
+			Application keys are required for all API requests, if you do not pass "?appKey=example.com" you will get a #{wrap_number("no_key")} error. These are used for statistics on requests.
+		%p
+			Keys are not given out, just use the domain you are showing the data on. If you are requesting it for "foobar.com" then it would be "?appKey=foobar.com"
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header Media
+		.rowsep
+		%p
+			Portraits can be found #{link_to("here", "static/portraits.zip")}, achievements can be found #{link_to("here", "static/achievements.zip")}.
+		%p
+			You can find the SC2Ranks logo in various sizes, #{link_to "16x16", "/favicon.png"}, #{link_to "32x32", image_path("logo_tiny.png")}, #{link_to "50x50", image_path("logo_small.png")}, #{link_to "100x100", image_path("logo_medium.png")}, #{link_to "200x200", image_path("logo_large.png")}.
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header Libraries & Modules
+		.rowsep
+		%p
+			Some awesome users have made tools to make using SC2 Ranks data easier. If you made something I missed, let me know and I'll get it added.
+		%p
+			Python - #{link_to("http://github.com/canute/sc2ranks", "http://github.com/canute/sc2ranks")} by Canute
+		%p
+			\.NET 4.0 - #{link_to("http://sc2ranksnet.codeplex.com/", "http://sc2ranksnet.codeplex.com/")} by Kralizek
+		%p
+			Ruby - #{link_to("http://github.com/Soleone/sc2ranks", "http://github.com/Soleone/sc2ranks")} by Soleone
+		%p
+			PHP - #{link_to("http://github.com/ameerkat/sc2ranks-php", "http://github.com/ameerkat/sc2ranks-php")} by ameerkat
+		%p
+			PHP (Mass APIs) - #{link_to("https://github.com/kharabasz/system-service-sc2ranks", "https://github.com/kharabasz/system-service-sc2ranks")} by yenta
+		%p
+			Drupal plugin - #{link_to("http://github.com/ameerkat/sc2ranks-drupal", "http://github.com/ameerkat/sc2ranks-drupal")} by ameerkat
+		%p
+			C++ - #{link_to("http://code.google.com/p/sc2ranks-cpp-lib/", "http://code.google.com/p/sc2ranks-cpp-lib/")} by Vevix
+		
+-#.spacer
+-#.w960
+-#	.shadow.api
+-#		%h1.header Deprecation
+-#		.rowsep
+-#		%p
+-#			The old /api/char/region/name and /api/char/region/name/1 APIs have been deprecated. They won't be removed for another month or two, but it's suggested you swap over as soon as possible.
+.spacer
+.w960
+	.shadow.api
+		%h1.header Linking to SC2 Ranks
+		.rowsep
+		%p
+			There are a few ways to link to pages on SC2 Ranks using different data you get back from the API.
+		%p
+			Character profiles with battle.net id: http://sc2ranks.com/char/#{wrap_api_arg("region")}/#{wrap_api_arg("bnet id")}/#{wrap_api_arg("name")}
+		%p
+			Character profiles with character code: http://sc2ranks.com/charcode/#{wrap_api_arg("region")}/#{wrap_api_arg("code")}/#{wrap_api_arg("name")}
+		%p
+			Division with internal id: http://sc2ranks.com/div/#{wrap_api_arg("sc2rank id")}
+		%p
+			Divisions with battle.net id: http://sc2ranks.com/div/bnet/#{wrap_api_arg("bnet id")}			
+
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header Profile Search
+		.rowsep
+		%p
+			Let's you search for profiles to find a characters battle.net id, an exact duplicate of the "Profile Finder" tab. Replacement to allow you to search for characters without having the character code, or relying purely on names.
+		%p
+			type can be #{wrap_number("1t")}, #{wrap_number("2t")}, #{wrap_number("3t")}, #{wrap_number("4t")}, #{wrap_number("achieve")}. #t refers to team, so 1t is 1v1 team and so on, achieve refers to the characters achievements.
+		%p
+			sub_type can be #{wrap_number("points")}, #{wrap_number("wins")}, #{wrap_number("losses")}, #{wrap_number("division")} for #t, otherwise it's just #{wrap_number("points")}.
+		%p
+			value is the value of what to search on based on type + sub_type, if you passed #{wrap_number("division")} then it's the division name, if you pass #{wrap_number("losses")} it's the total number of losses and so on. Matches are all inexact, if you pass #{wrap_number("500")} for points it searches for >= 400 and <= 600, if you search for division name it does an inexact match.
+		%p
+			URL format: http://sc2ranks.com/api/psearch/#{wrap_api_arg("region")}/#{wrap_api_arg("name")}/#{wrap_api_arg("type")}/#{wrap_api_arg("sub_type")}/#{wrap_api_arg("value")}
+		%p
+			Example: #{link_to "http://sc2ranks.com/api/psearch/am/Shadowed/1t/division/DuGalle", "htp://sc2ranks.com/api/psearch/am/Shadowed/1t/division/DuGalle.json?appKey=#{URI.encode("sc2ranks.com")}"}
+		%p
+			Error: #{wrap_number("no_character")} if none are found.
+		%p
+			Cached: 30 minutes
+		
+.spacer
+.w960
+	.shadow.api
+		%h1.header Base character
+		.rowsep
+		%p
+			Minimum amount of character data, just gives achievement points, character code and battle.net id info.
+		%p
+			URL format: http://sc2ranks.com/api/base/char/#{wrap_api_arg("region")}/#{wrap_api_arg("name")}
+		%p
+			Example: #{link_to "http://sc2ranks.com/api/base/char/am/HuK$530", "http://sc2ranks.com/api/base/char/am/HuK$530.json?appKey=#{URI.encode("sc2ranks.com")}"}
+		%p
+			Error: #{wrap_number("no_character")} if a character does not exist
+		%p
+			Cached: 1 hour
+		.rowsep
+		%h1.header Portraits
+		.rowsep
+		%p
+			Portraits are available in 45x45, 75x75 and 90x90.
+		%p
+			If portraits have been loaded, you will see a key with "portrait" containing data to get the players current portrait. #{wrap_number("icon_id")} refers to the sprite image series, #{wrap_number(2)} would refer to "portraits-2-##.jpg".
+		%p
+			#{wrap_number("column")} and #{wrap_number("row")} are used to find the location of the sprite, For example column #{wrap_number(3)}, row #{wrap_number(1)}, icon id #{wrap_number(2)} would translate into the Sarah Kerrigan portrait at 75x75 by doing #{wrap_number("-(3 * 75)")} = #{wrap_number("-225")} and #{wrap_number("-(1 * 75)")} = #{wrap_number("-75")} to find the location. Which would give you the following CSS code (replace /images/ with the path to the image):
+		%p
+			#{wrap_number("background: url('/images/achievements-2-75.jpg') -225px -75px no-repeat; width: 75px; height: 75px;")}
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header Character with base team info
+		.rowsep
+		%p
+			Includes base character data, as well as base data on all of the players teams. If you need team members you need the API below.
+		%p
+			URL format: http://sc2ranks.com/api/base/teams/#{wrap_api_arg("region")}/#{wrap_api_arg("name")}
+		%p
+			Example: #{link_to "http://sc2ranks.com/api/base/teams/am/HuK$530", "http://sc2ranks.com/api/base/teams/am/HuK$530.json?appKey=#{URI.encode("sc2ranks.com")}"}
+		%p
+			Error: #{wrap_number("no_character")} if a character does not exist
+		%p
+			Cached: 3 hours
+
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header Character with team info and team members
+		.rowsep
+		%p
+			Includes base character data, and extended team information for the passed bracket.
+		%p
+			URL format: http://sc2ranks.com/api/char/teams/#{wrap_api_arg("region")}/#{wrap_api_arg("name")}/#{wrap_api_arg("bracket")}/#{wrap_api_arg("0 or 1 is random")}
+		%p
+			URL format with rankings: http://sc2ranks.com/api/char/teams/#{wrap_api_arg("region")}/#{wrap_api_arg("name")}/#{wrap_api_arg("bracket")}/#{wrap_api_arg("0 or 1 is random")}
+		%p
+			Example: #{link_to "http://sc2ranks.com/api/char/teams/am/HuK$530/1/0", "http://sc2ranks.com/api/char/teams/am/HuK$530/1/0.json?appKey=#{URI.encode("sc2ranks.com")}"}
+		%p
+			Error: #{wrap_number("no_character")} if a character does not exist.
+		%p
+			Cached: 6 hours
+
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header Mass base character
+		.rowsep
+		%p
+			Same as pulling just character information, except you can pull #{LIMITS[:mass_api]} characters at once. The returns are the same, except you get an array of characters rather than a hash. Since a lot more data can be returned, only JSON is available, you cannot get XML from the API due to XML being rather verbose. Names have to be passed through POST requests rather than URLs as well.
+		%p
+			AJAX request in Javascript for example: #{wrap_number("#{{:characters => [{:region => "us", :name => "HuK", :bnet_id => 388538}, {:region => "us", :name => "dayvie", :code => 947}]}.to_json}")}
+		%p
+			Raw post request of the above: #{wrap_number("characters[0][region]=us&characters[0][name]=HuK&characters[0][bnet_id]=388538&characters[1][region]=us&characters[1][name]=dayvie&characters[1][code]=947")}
+		%p
+			URL format: http://sc2ranks.com/api/mass/base/char/
+		%p
+			Error: #{wrap_number("no_characters")} if you do not pass any characters or #{wrap_number("too_many_characters")} if you pass over #{LIMITS[:mass_api]} characters to be returned at once.
+		%p
+			Cached: 1 hour
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header Mass base character + team information
+		.rowsep
+		%p
+			Works the same as pulling base team information for a character, except you can pull #{LIMITS[:mass_api]} characters at once. The returns are the same, except you get an array of characters rather than a hash. Since a lot more data can be returned, only JSON is available, you cannot get XML from the API due to XML being rather verbose. Names have to be passed through POST requests rather than URLs as well.
+		%p
+			Bracket is the bracket you want the players teams from, bracket => 1, is_random => 0 gets you 1v1, if you want 4v4 random you would do bracket => 4, is_random => 1
+		%p
+			AJAX request in Javascript for example: #{wrap_number("#{{:team => {:bracket => 1, :is_random => 0}, :characters => [{:region => "us", :name => "HuK", :bnet_id => 388538}, {:region => "us", :name => "dayvie", :code => 947}]}.to_json}")}
+		%p
+			Raw post request of the above: #{wrap_number("team[bracket]=1&team[is_random]=0&characters[0][region]=us&characters[0][name]=HuK&characters[0][bnet_id]=388538&characters[1][region]=us&characters[1][name]=dayvie&characters[1][code]=947")}
+		%p
+			URL format: http://sc2ranks.com/api/mass/base/teams/
+		%p
+			Error: #{wrap_number("no_characters")} if you do not pass any characters or #{wrap_number("too_many_characters")} if you pass over #{LIMITS[:mass_api]} characters to be returned at once.
+		%p
+			Cached: 3 hours
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header Character searching
+		.rowsep
+		%p
+			Allows you to perform small searches, useful if you want to hookup an IRC bot or such. Only returns the first 10 names, but you can see the total number of characters and pass an offset if you need more. Search is case-insensitive.
+		%p
+			Search type can be #{wrap_number("exact")}, #{wrap_number("contains")}, #{wrap_number("starts")}, #{wrap_number("ends")}.
+		%p
+			URL format: http://sc2ranks.com/api/search/#{wrap_api_arg("search type")}/#{wrap_api_arg("region")}/#{wrap_api_arg("name")}
+		%p
+			URL format with offsets: http://sc2ranks.com/api/search/#{wrap_api_arg("search type")}/#{wrap_api_arg("region")}/#{wrap_api_arg("name")}/#{wrap_api_arg("offset")}
+		%p
+			Example: #{link_to "http://sc2ranks.com/api/exact/search/am/shadow", "http://sc2ranks.com/api/search/exact/am/shadow.json?appKey=#{URI.encode("sc2ranks.com")}"}
+		%p
+			Errors: #{wrap_number("no_characters")} no characters found.
+		%p
+			Cached: 30 minutes
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header Listing custom divisions
+		.rowsep
+		%p
+			Allows you to get everyone in a custom division.
+		%p
+			URL format: http://sc2ranks.com/api/clist/#{wrap_api_arg("div id")}/#{wrap_api_arg("region or all")}/#{wrap_api_arg("league or all")}/#{wrap_api_arg("bracket")}/#{wrap_api_arg("1 or 0 for random brackets")}
+		%p
+			Example: #{link_to "http://sc2ranks.com/api/clist/1/all/all/1/0", "http://sc2ranks.com/api/clist/1/all/all/1/0.json?appKey=#{URI.encode("sc2ranks.com")}"}
+		%p
+			Errors: #{wrap_number("no_characters")} no characters added to division yet, #{wrap_number("no_custom")} no custom division by that id.
+		%p
+			Cached: 12 hours
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header Manage custom divisions
+		.rowsep
+		%p
+			Allows you to add or remove characters to a custom division, to reduce abuse you are required to use the custom divisions password to manage.
+		%p
+			URL format: http://sc2ranks.com/api/custom/#{wrap_api_arg("custom id")}/#{wrap_api_arg("password")}/#{wrap_api_arg("add or remove")}/#{wrap_api_arg("comma separated characters")}
+		%p
+			Example: http://sc2ranks.com/api/custom/1/testing/remove/AM-Shadowed!738095,AM-dayvie!715900,AM-qxc!689672.json
+		%p
+			The number is the battle.net id found in battle.net or sc2rank.com profile links. For example: http://sc2ranks.com/am/738095/Shadowed becomes "AM-Shadowed!738095"
+		%p
+			Errors: #{wrap_number("bad_type")} type argument was not add or remove, #{wrap_number("failed_auth")} password incorrect, #{wrap_number("no_custom")} no custom division found, #{wrap_number("banned")} ip banned.
+		%p 
+			You will get a list of characters with the status of adding them. Added/removed/queued status will be passed regardless of the character already having been added or removed. Example formats:
+		%p
+			Successful add/remove: {:status => #{wrap_api_arg("queued/added/removed")}, :char => #{wrap_api_arg("list of characters from url")}}
+		%p
+			Error in parsing: {:error => #{wrap_api_arg("bad_format")}, :char => #{wrap_api_arg("list of character from url")}
+
+.spacer
+.w960
+	.shadow.api
+		%h1.header Maximum bonus pool
+		.rowsep
+		%p
+			Returns the total bonus pool for every region, regions are typically within 10 points of each other.
+		%P
+			URL: http://sc2ranks.com/api/bonus/pool
+

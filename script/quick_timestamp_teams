@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+puts "Quick updating teams"
+
+PER_RUN = 1000
+has_data = true
+offset = 0
+
+while( has_data ) do
+	has_data = nil
+	
+	puts "Loading #{offset}"
+	
+	Team.all(:conditions => ["last_game_at is null"], :limit => PER_RUN, :offset => offset).each do |team|
+		has_data = true
+		
+		team.last_game_at = team.updated_at
+		team.save
+		
+		puts "Updated #{team.id}"
+	end
+	
+	puts "Finished #{offset}"
+	offset += PER_RUN
+end
+
+puts "Finished!"

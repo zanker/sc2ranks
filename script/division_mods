@@ -1,0 +1,556 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+Division.update_all(["modifier = null"])
+
+POINT_MODIFIER = 63
+
+modifiers = {}
+# SOUTHEAST ASIA
+modifiers["sea"] = {}
+modifiers["sea"][0] = <<EOF
+Corruptor Tango
+Zealot Epsilon
+Khala Bravo
+EOF
+
+modifiers["sea"][1] = <<EOF
+Queen Foxtrot
+Firebat Sierra
+EOF
+
+modifiers["sea"][2] = <<EOF
+Kagg Gamma
+Feld Indigo
+EOF
+
+modifiers["sea"][3] = <<EOF
+Scarab Nu
+Siege Tank Alpha
+Changeling Victor
+EOF
+
+modifiers["sea"][4] = <<EOF
+Roach Sigma
+Drone Romeo
+Zekrath Beta
+Carrier Kilo
+Stukov Pepper
+Felanis Phi
+EOF
+
+modifiers["sea"][5] = <<EOF
+Tassadar Upsilon
+Turaxis Tau
+Hanson Delta
+War Pigs Dixie
+Zekrath Theta
+Infestor Yankee
+Ulrezaj Zeta
+Umoja Hawk
+Stukov Xi
+Zergling Lambda
+Hydralisk Lima
+Prelate November
+War Pigs Iota
+Valkyrie Charlie
+Khaydarin Omega
+New Folsom Mars
+Tabrenus Whiskey
+Kaloth Juliet
+Zer'Atai Eta
+Warp Prism Zed
+Viking Rho
+Ghost Echo
+Viking Tau
+Banshee Quest
+Moria Pi
+Hanson Foxtrot
+Ladranix Omicron
+Baneling Chi
+Kaloth Mu
+EOF
+
+modifiers["sea"][6] = <<EOF
+Overlord Psi
+Kerrigan Pi
+Carrier Gamma
+Aleksander Alamo
+EOF
+
+
+# KOREA 
+modifiers["kr"] = {}
+modifiers["kr"][0] = <<EOF
+토시 엉클 조
+리버티 크시
+리버티 크시
+램지 로미오
+투락시스 찰리
+카그 딕시
+투락시스 찰리
+아이어 에코
+차원 분광기 퀘스트
+리버티 크시
+해적선 그라비티
+램지 로미오
+차원 분광기 퀘스트
+해적선 그라비티
+투락시스 찰리
+투락시스 찰리
+해적선 그라비티
+리버티 크시
+차원 분광기 퀘스트
+차원 분광기 퀘스트
+투락시스 찰리
+리버티 크시
+카그 딕시
+리버티 크시
+차원 분광기 퀘스트
+프라이드워터 페퍼
+투락시스 찰리
+해적선 그라비티
+투락시스 찰리
+리버티 크시
+리버티 크시
+아이어 에코
+램지 로미오
+리버티 크시
+리버티 크시
+아이어 에코
+리버티 크시
+카그 딕시
+해적선 그라비티
+카그 딕시
+램지 로미오
+램지 로미오
+리버티 크시
+램지 로미오
+해적선 그라비티
+해적선 그라비티
+램지 로미오
+카그 딕시
+리버티 크시
+투락시스 찰리
+아이어 에코
+아이어 에코
+해적선 그라비티
+램지 로미오
+리버티 크시
+리버티 크시
+투락시스 찰리
+아이어 에코
+리버티 크시
+아이어 에코
+아이어 에코
+리버티 크시
+리버티 크시
+리버티 크시
+리버티 크시
+램지 로미오
+리버티 크시
+카그 딕시
+리버티 크시
+리버티 크시
+프라이드워터 페퍼
+해적선 그라비티
+해적선 그라비티
+리버티 크시
+투락시스 찰리
+리버티 크시
+램지 로미오
+해적선 그라비티
+EOF
+
+modifiers["kr"][1] = <<EOF
+하틀리 찰리
+아우리가 파이
+악령 브라보
+하틀리 찰리
+아우리가 파이
+EOF
+
+modifiers["kr"][2] = <<EOF
+수호군주 딕시
+의료선 양키
+일벌레 람다
+아르고 요타
+수호군주 딕시
+의료선 양키
+수호군주 딕시
+시미터 킬로
+일벌레 람다
+EOF
+
+modifiers["kr"][3] = <<EOF
+타소니스 그라비티
+워필드 로
+리버티 엉클
+펠드 시에라
+포식귀 요타
+거대괴수 줄리엣
+타소니스 그라비티
+나글파르 노벰버
+워필드 로
+포식귀 요타
+나글파르 노벰버
+EOF
+
+modifiers["kr"][4] = <<EOF
+공성 전차 마즈
+거신 엡실론
+보로스 뉴
+집행관 탱고
+사르가스 위스키
+울트라리스크 오미크론
+보로스 뉴
+거신 엡실론
+사르가스 위스키
+타브레누스 인디고
+울트라리스크 오미크론
+뉴 폴섬 엉클
+망령 에코
+부세팔루스 리마
+바퀴 노벰버
+집행관 탱고
+부세팔루스 리마
+EOF
+
+modifiers["kr"][5] = <<EOF
+마 사라 오미크론
+아크튜러스 브라보
+쉘라크 제타
+왕복선 로미오
+회색곰 오메가
+울레자즈 마즈
+중재자 제타
+화염차 에코
+감시군주 뮤
+우라즈 시그마
+연결체 퀘스트
+자마라 호크
+가시지옥 탱고
+우모자 입실론
+텔레마트로스 노벰버
+노바 에타
+브라켄 델타
+기사단 카이
+무리 군주 카파
+시체매 엑스레이
+화염차 에코
+마인호프 카파
+티라도 인디고
+아르티카 뮤
+울레자즈 마즈
+공생충 시에라
+파괴자 오스카
+울레자즈 마즈
+차 알파
+수정탑 리마
+스투코프 킬로
+켈러시안 시그마
+관문 로
+건설로봇 위스키
+모라툰 시에라
+파멸충 양키
+울레자즈 마즈
+텔레마트로스 노벰버
+안젤름 베타
+펠라니스 킬로
+마인호프 카파
+모한다르 엡실론
+집정관 델타
+파괴자 오스카
+알자다르 입실론
+바이킹 브라보
+알자다르 입실론
+제련소 제드
+토시 크시
+EOF
+
+
+# EUROPE
+modifiers["eu"] = {}
+modifiers["eu"][0] = <<EOF
+Agria Alpha
+Akilae Lima
+Aldaris Foxtrot
+Feld Delta
+Forge Eta
+Hellion Echo
+Korhal Juliet
+Mar Sara Sigma
+Phoenix Mars
+Prelate Theta
+Ramsey X-Ray
+Rimes Echo
+Roach Lambda
+Roach Romeo
+Scimitar Psi
+Shuttle November
+Siege Tank Gamma
+Stukov Foxtrot
+Tal’darim Theta
+Uraj Eta
+Zealot Alamo
+EOF
+
+modifiers["eu"][1] = <<EOF
+Khala Tau
+Muadun Tau
+Mutalisk Zed
+Norad Phi
+Zamara Zed
+EOF
+
+modifiers["eu"][2] = <<EOF
+Chau Sara Quest
+Gorn Mars
+Nexus Epsilon
+Reaper Gravity
+Routhe Victor
+EOF
+
+modifiers["eu"][3] = <<EOF
+Boros Tango
+Brood Lord Mars
+Executor Alamo
+Hauler Foxtrot
+Khas Sierra
+Raven Gravity
+Scourge Charlie
+Shiloh Oscar
+Vermillion Nu
+EOF
+
+modifiers["eu"][4] = <<EOF
+Alzadar Sigma
+Augustgrad Kilo
+Char xi
+Gantrithor Bravo
+Jorgensen Zeta
+Judicator Hawk
+Lockwell Theta
+Urun Charlie
+EOF
+
+modifiers["eu"][5] = <<EOF
+Araq Delta
+Archon Beta
+Broodling Mu
+Corsaire Pepper
+Drone Echo
+Duke Sigma
+Kagg Upsilon
+Kalathi Pepper
+Kalathi Zeta 
+Liberty X-Ray
+Marine psi
+Meinhoff Pi
+Overlord Hawk
+Overmind November
+Sakai Lima
+Scourge Peppe
+Tabrenus Whiskey
+EOF
+
+modifiers["eu"][6] = <<EOF
+Queen Iota
+EOF
+
+# LATIN AMERICA
+modifiers["la"] = {}
+modifiers["la"][0] = <<EOF
+Halcyon November
+Praetor Indigo
+EOF
+
+modifiers["la"][1] = <<EOF
+Infestor Pepper
+EOF
+
+modifiers["la"][2] = <<EOF
+Argo Echo
+EOF
+
+modifiers["la"][3] = <<EOF
+Void Ray Tau
+Dominion Gamma
+EOF
+
+modifiers["la"][4] = <<EOF
+Drone Whiskey
+Scout Kilo
+Samiku Pi
+EOF
+
+modifiers["la"][5] = <<EOF
+Spectre Zed
+Augustgrad X-Ray
+Augustgrad Pepper
+Medic Mu
+Preserver Dixie
+Raven Chi
+Lurker Sigma
+Viking Romeo
+Raynor Delta
+Ehlna Bravo
+Azimar Charlie
+Shiloh Upsilon
+Adun Beta
+OBserver Mars
+Roxara Psi
+Turaxis Omega
+EOF
+
+modifiers["la"][6] = <<EOF
+Medivac Alamo
+EOF
+
+
+# UNITED STATES
+modifiers["us"] = {}
+modifiers["us"][0] = <<EOF
+Kelerchian Upsilon
+Artika Pepper
+Medic Mu
+Medivac Alamo
+Kelerchian X-Ray
+Akilae Omicron
+Hartley Quest
+Talematros Eta
+Horner Chi
+Immortal Yankee
+Turaxis Yankee
+Observer Mars
+Pylon Kappa
+Medic Pepper
+Overmind Victor
+Nagglfar Zed
+Selendis Quest
+Uraj Dixie
+Medivac Juliet
+Uraj Omega
+Zekrath Sigma
+Phash Kappa
+Tassadar Charlie
+Victory Bravo
+Moratun Sierra
+Raven Zed
+Lenassa Dixie
+Zergling Quest
+Shuttle Nu
+Dominion Beta
+Tychus Theta
+Tal’darim Theta
+EOF
+
+modifiers["us"][1] = <<EOF
+Forge Sigma
+Mohandar Xi
+Medivac Charlie
+Halcyon Gravity
+Augustgrad Sigma
+Drone Whiskey
+Nagglfar Delta
+Argo Echo
+Executor Phi
+Rimes Tau
+Torrasque Eta
+Kaloth Psi
+Immortal Phi
+EOF
+
+modifiers["us"][2] = <<EOF
+Typhon Whiskey
+Dropship November
+Feld Lima
+Infestor Pepper
+Corsair Uncle
+Void Ray Tango
+Spectre Zed
+EOF
+
+modifiers["us"][3] = <<EOF
+Void Ray Pi
+Nexus Hawk
+Agria Echo
+Drone Echo
+Ursa Lambda
+Ehlna Bravo
+Halcyon November
+Hartley Nu
+Phash Bravo
+Shakuras Uncle
+EOF
+
+modifiers["us"][4] = <<EOF
+Raven Victor
+Shakuras Iota 
+Queen Uncle
+Boros Iota
+Boros Uncle
+Urun Charlie
+Feld Delta
+Shuttle Foxtrot
+Augustgrad Psi
+Arcturus Mars
+Void Ray Tau
+Praetor Indigo
+EOF
+
+modifiers["us"][5] = <<EOF
+Azimar Romeo
+Zerus Romeo
+Reaver Gamma
+Sentry Pi
+Firebat Bravo
+Azimar Charlie
+Samiku Pi
+Uraj Yankee
+Augustgrad X-Ray
+Adun Pi
+Scout Kilo
+Dragoon Sierra
+Valerian Uncle
+Mohandar Romeo
+Medic Whiskey
+Raven Chi
+Taarim Gamma
+Muadun Pepper
+Roach Iota
+Goliath Beta
+EOF
+
+modifiers.each do |region, data|
+	data.each do |modifier, divisions|
+		divisions.split("\n").each do |name|
+			if region == "kr"
+				division = Division.first(:conditions => ["region = ? AND league = ? AND bracket = ? AND is_random = ? AND (name ILIKE ?)", region, LEAGUES["diamond"], 1, false, "%#{name}%"])
+			else
+				name = name.strip();
+				name = "Division #{name}"
+				division = Division.first(:conditions => ["region = ? AND league = ? AND bracket = ? AND is_random = ? AND (LOWER(name) = ? OR UPPER(name) = ? OR name = ?)", region, LEAGUES["diamond"], 1, false, name.downcase, name.upcase, name])
+			end
+			
+			
+			unless division
+				puts "Cannot find #{region}-#{name}"
+				next
+			end
+		
+			division.modifier = modifier * POINT_MODIFIER
+			division.save
+		
+			puts "Updated #{region}-#{name}, #{division.modifier}"
+		end
+	end
+end
+
+
+Rails.cache.write("masters", Time.now.to_i, :raw => true, :expires_in => 24.hours)
+
+puts "Done"

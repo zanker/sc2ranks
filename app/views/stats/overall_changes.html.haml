@@ -1,0 +1,18 @@
+- @page_title = "Database statistics graphs"
+- cache(@page_hash, :raw => true, :expires_in => 1.hour) do
+	.w960
+		.shadow.divisioninfo
+			= stat_info(:text => "Race", :total => @player_total, :bracket => @bracket, :is_random => @is_random, :region => @region)
+	.stats
+		.spacer
+		.w960
+			%table.shadow{:cellspacing => "1px"}
+				%tr.header
+					%th Population graph (Last 31 days)
+				%tr
+					%td.racegraph
+						%div{:id => "population", :class => "container"}
+							.loading Loading, this may take a second.
+	= create_overall(@population)
+	= javascript_include_tag("highcharts.src", :cache => "cache-charts", :lifetime => 1.month)
+	= javascript_include_tag("overallchange", :cache => "cache-overallchange", :lifetime => 1.month)

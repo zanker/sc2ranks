@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+puts "Updating top 1000 achievement characters points"
+
+Character.all(:conditions => "achievement_points > 0 AND achievement_points < 4960", :limit => 500, :order => "achievement_points DESC").each do |character|
+	time_taken = Time.now.to_f
+	full_url = "profile/#{character.bnet_id}/#{LOCALE_IDS[character.region]}/#{URI.escape(character.name)}/matches"
+	
+	begin
+		content = Armory::Node.cron_pull(character.region, full_url)
+		
+		time_taken = Time.now.to_f - time_taken
+		time_taken = "%.2f" % time_taken		
+		
+		doc = Nokogiri::HTML(content)
+		next if doc.nil?
+
+		Jobs::Profile.parse_match_history(character, doc, content)
+		Jobs::Profile.save_character(character, doc, content)
+	rescue EOFError, OpenURI::HTTPError, Errno::ECONNRESET, Timeout::Error, SocketError, Errno::ECONNREFUSED, Errno::ETIMEDOUT, Errno::EHOSTUNREACH, Errno::ENETUNREACH => e
+		puts e.to_s
+		puts full_url
+	end
+end

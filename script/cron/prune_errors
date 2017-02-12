@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+puts "Removing all errors older than 10 minutes ago"
+Armory::Error.destroy_all(["created_at < ?", 10.minutes.ago])

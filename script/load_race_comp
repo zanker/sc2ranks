@@ -1,0 +1,38 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+has_data = true
+offset = 0
+id = 0
+while( has_data ) do
+	has_data = nil
+	
+	Team.all(:conditions => ["race_comp is null"], :limit => 10000, :offset => offset, :include => [:characters]).each do |team_data|
+		begin
+			has_data = true
+			next if team_data.nil?
+			race_comp = []
+			team_data.characters.each do |character|
+				next if character.nil?
+				race_comp.push(character.fav_race)
+			end
+	
+			team_data.race_comp = race_comp.sort.join("/")
+			team_data.save
+	
+			puts "[#{id}] #{team_data.division_id} #{team_data.points}, #{team_data.race_comp}"
+			id += 1
+		rescue
+		end
+	end
+	
+	offset += 10000
+end
+
+
+
+
+

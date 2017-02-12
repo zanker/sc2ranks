@@ -1,0 +1,279 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "nokogiri"
+
+DEBUG = ARGV && ARGV.first && ARGV.first == "1" ? true : nil
+
+@shutdown = nil
+
+forum_data_file = File.join(Rails.root, "script", "forum_data.json")
+begin
+	forum_browsed_data = YAML::load(File.open(forum_data_file).read) || {}
+rescue Exception => e
+	forum_browsed_data = {}
+end
+
+#self.last_url = "http://#{FORCE_REGION[job.region] || job.region}.battle.net/sc2/#{LOCALES[job.region]}/#{url_args.join("/")}"
+def request_url(url)
+	return open(url,
+		"Cookie" => "int-SC2=1",
+		"User-Agent" => "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_4; en-US) AppleWebKit/534.3 (KHTML, like Gecko) Chrome/6.0.464.0 Safari/534.3")
+end
+
+trap('TERM') { @shutdown = true }
+trap('INT') { @shutdown = true }
+
+begin
+	trap('QUIT') { @shutdown = true }
+rescue ArgumentError
+end
+
+# Pull threads FROM forums
+def pull_threads(post_data, base_url, forum_id)
+	return nil, 0 if @shutdown
+	
+	list = []
+	begin
+		puts "Pulling #{base_url}#{forum_id}" if DEBUG
+		threads = request_url("#{base_url}#{forum_id}")
+	rescue Exception => e
+		puts e.inspect
+		puts e.backtrace
+	end
+	
+	if threads.nil?
+		puts "Failed to pull forum threads"
+		return nil, 0
+	end
+	
+	threads_doc = Nokogiri::HTML(threads.read)
+	threads_doc.xpath("//table[@id='posts']/tr[not(@class='post-th')]").each do |topic_doc|
+		posts = topic_doc.xpath("td[@class='post-replies']").text().to_i
+		next if posts == 0
+		
+		topic_link = topic_doc.xpath("td[@class='post-title']/a")
+		topic_id = topic_link.attr("href").to_s.match(/([0-9]+)/)[1].to_i
+		next if topic_id == 0
+
+		# Posts didn't change, skip
+		next if post_data[topic_id] && post_data[topic_id] == posts
+		post_data[topic_id] = posts
+		
+		list.push(topic_id)
+	end	
+	
+	# Figure out total pages
+	pages = threads_doc.xpath("//div[@class='pageNav']/a[last() - 1]")
+	pages = pages && pages.first()
+	total_pages = pages && pages.text().to_i || 1
+	
+	return list, total_pages
+end
+
+# Pull characters FROM topics
+def pull_characters(base_url, topic_id)
+	return nil, 0 if @shutdown
+
+	list = {}
+	char_codes = {}
+	begin
+		puts "Pulling #{base_url}topic/#{topic_id}" if DEBUG
+		topic = request_url("#{base_url}topic/#{topic_id}")
+	rescue Exception => e
+		puts e.inspect
+		puts e.backtrace
+	end
+
+	if topic.nil?
+		puts "Failed to pull topic"
+		return nil, 0
+	end
+	
+	topic_doc = Nokogiri::HTML(topic.read)
+	topic_doc.xpath("//div[@class='user-name']").each do |profile_doc|
+		url_match = profile_doc.xpath("a").attr("href").to_s.match(/profile\/([0-9]+)\/[0-9]+\/(.+)\//)
+		next if url_match.nil?
+		
+		list[url_match[1].to_i] = url_match[2]
+		
+		character_code = profile_doc.xpath("span").text().match("([0-9]+)")
+		char_codes[url_match[1].to_i] = character_code[1].to_i unless character_code.nil?
+	end	
+	
+	# Figure out total pages
+	pages = topic_doc.xpath("//div[@class='pageNav']/a[last() - 1]")
+	pages = pages && pages.first()
+	total_pages = pages && pages.text().to_i || 1
+	
+	return list, char_codes, total_pages
+end
+
+new_characters = {}
+full_start = Time.now.to_f
+
+puts "Starting forum spider"
+REGIONS.reverse.each do |region|
+	break if @shutdown
+	forum_browsed_data[region] ||= {:forums => {}, :posts => {}, :topics => {}}
+	forum_data = forum_browsed_data[region]
+	
+	region_start = Time.now.to_f
+	
+	base_url = "#{BNET_URLS[region]}/sc2/#{FORUM_LOCALES[region]}/forum/"
+	puts "[#{region}] Onwards #{base_url}"
+	
+	# First pull the directory of forums
+	begin
+		directory = request_url(base_url)
+	rescue Exception => e
+		puts e.inspect
+		puts e.backtrace
+	end
+	
+	if directory.nil?
+		puts "Failed to pull data for region"
+		next
+	end
+	
+	# Grab list of forums
+	forum_list = []
+
+	directory_doc = Nokogiri::HTML(directory.read)
+	directory_doc.xpath("//a[@class='forum-link']").each do |forum_doc|
+		forum_list.push(forum_doc.attr("href"))
+	end
+	
+	if forum_list.length == 0
+		puts "No forums found" if DEBUG
+		next
+	end
+	
+	# Check forum
+	puts "Have #{forum_list.length} forums to work with" if DEBUG
+	forum_list.each do |forum_id|
+		puts "Pulling forum #{forum_id}" if DEBUG
+
+		# Grab first page to figure out total pages
+		list, total_pages = pull_threads(forum_data[:posts], base_url, forum_id)
+		next if list.nil?
+
+		# Grab sub pages
+		topic_list = list
+		if total_pages > 1
+			puts "Have #{total_pages} (scanned #{forum_data[:forums][forum_id] or "none"} in this forum) grabbing..." if DEBUG
+			# Don't scan every page, just scan the new ones
+			if forum_data[:forums][forum_id]
+				spider_pages = (total_pages - forum_data[:forums][forum_id]).abs
+			else
+				spider_pages = total_pages
+			end
+			
+			(2...spider_pages+1).each do |i|
+			 	return nil, 0 if @shutdown
+
+				list, pages = pull_threads(forum_data[:posts], base_url, "#{forum_id}?page=#{i}")
+				if list
+					topic_list = topic_list | list
+				end
+			end
+			
+			forum_data[:forums][forum_id] = total_pages
+			sleep 0.25
+		end
+		
+		sleep 0.25
+		
+		topic_list.uniq!
+		if topic_list.length == 0
+			puts "No topics found"
+			next
+		end
+		
+		# Done grabbing a list of topics, scan them all
+		puts "Have #{topic_list.length} topics to work with" if DEBUG
+		topic_list.each do |topic_id|
+		 	break if @shutdown
+
+			puts "Pulling topic #{topic_id}" if DEBUG
+
+			# Find total pages for the topic
+			list, char_codes, total_pages = pull_characters(base_url, topic_id)
+			next if list.nil?
+			
+			# Scan pages
+			character_list = list
+			code_list = char_codes
+			if total_pages > 1
+				if forum_data[:topics][topic_id]
+					start = forum_data[:topics][topic_id]
+					puts "Have #{total_pages} pages in this topic, grabbing #{start} - #{total_pages}" if DEBUG
+				else
+					start = 1
+					puts "Have #{total_pages} pages in this topic, grabbing all of them" if DEBUG
+				end
+				
+				(start...total_pages+1).each do |i|
+				 	break if @shutdown
+
+					list, char_codes, pages = pull_characters(base_url, "#{topic_id}?page=#{i}")
+					if list
+						character_list = character_list.merge(list)
+						code_list = code_list.merge(char_codes)
+					end
+				end
+				
+				sleep 0.25
+			end
+			
+			forum_data[:topics][topic_id] = total_pages
+
+			sleep 0.25
+
+			if character_list.length == 0
+				puts "No characters found" if DEBUG
+				next
+			end
+
+			# Now queue them
+			puts "Ended up with #{character_list.length} characters" if DEBUG
+			Character.all(:select => "bnet_id, character_code", :conditions => ["region = ? AND bnet_id IN (?)", region, character_list.keys]).each do |character|
+				bnet_id = character.bnet_id.to_i
+				next if code_list[bnet_id] && ( character.character_code.to_i != code_list[bnet_id].to_i )
+				character_list.delete(bnet_id)
+			end
+
+			puts "Now we have #{character_list.length} characters left over." if DEBUG
+			next if character_list.length == 0
+			
+			new_characters[region] ||= 0
+			new_characters[region] += character_list.length
+
+			character_list.each do |bnet_id, name|
+				puts "Queuing #{region}-#{name} (#{bnet_id})" if DEBUG
+				Armory::Queue.character(:region => region, :is_auto => true, :bnet_id => bnet_id.to_i, :name => name, :character_code => code_list[bnet_id.to_i], :tag => 9, :force => true)
+			end
+		end
+	end
+	
+	puts "******************** FINISHED REGION ********************"
+	puts "Total new characters: #{new_characters[region].to_i}"
+	puts "Run time: #{(Time.now.to_f - region_start) / 60} minutes"
+
+	open(forum_data_file, "w+") do |file|
+		file.write(forum_browsed_data.to_yaml)
+	end
+end
+
+puts "**********************************"
+puts "Finished full scan"
+puts "**********************************"
+puts new_characters.to_json
+puts "Run time: #{(Time.now.to_f - full_start) / 60} minutes"
+
+open(forum_data_file, "w+") do |file|
+	file.write(forum_browsed_data.to_yaml)
+end

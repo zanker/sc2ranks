@@ -1,0 +1,61 @@
+- @page_title = "Starcraft region statistics"
+- cache(@page_hash, :raw => true, :expires_in => 1.day) do
+	.spacer
+	.w960
+		.shadow.divisioninfo
+			= stat_info(:text => "Region", :total => @player_total, :group => @player_group, :bracket => @bracket, :is_random => @is_random, :league => @league, :activity => @activity, :expansion => @expansion)
+	.spacer
+	.w960.tblstats
+		%table.shadow{:cellspacing => "1px"}
+			%tr.header
+				%th Race distribution by region graph
+			%tr
+				%td.racegraph
+					#container.container
+
+	- REGIONS_GLOBAL.each do |region|
+		.spacer
+		.w960.tblstats
+			%table.shadow{:cellspacing => "1px"}
+				%tr.header
+					%th{:colspan => 6}
+						#{REGION_NAMES[region]}
+						(#{wrap_number(number_with_delimiter(@regions[:races][region] && @regions[:races][region][:total] || 0))} team players)
+				%tr.columns
+					%th.type Type
+					- RACE_LIST.each do |race|
+						%th.raceicon
+							= image_tag "#{RACES[race]}.png"
+							%span= RACE_NAMES[race]
+				- [[:races, "Distribution", "0%"], [:race_wins, "Average wins", "0%"], [:race_points, "Average points", "0"]].each do |row|
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.type
+							#{row[1]}
+						- RACE_LIST.each do |race|
+							%td= format_stat_number(@regions[row[0]][region], race) || row[2]
+					
+	- if @regions[:leagues]
+		.spacer
+		.w960.tblstats
+			%table.shadow{:cellspacing => "1px"}
+				%tr.header
+					%th{:colspan => 8} League distribution by region
+				%tr.columns
+					%th.region Region
+					- LEAGUE_LIST.each do |league|
+						%th.league
+							= make_badge(LEAGUES[league], 4, "19x20")
+							%span= LEAGUE_NAMES[league]
+				%tr{:class => cycle("darkbg", "lightbg")}
+					%td.region Global
+					- LEAGUE_LIST.each do |league|
+						%td= format_stat_number(@regions[:leagues]["global"], league)
+				- RANK_REGIONS.each do |region|
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.region= REGION_NAMES[region]
+						- LEAGUE_LIST.each do |league|
+							%td= format_stat_number(@regions[:leagues][region], league) || "0%"
+
+	= create_region_race_distribution(@regions[:races])
+	= javascript_include_tag("highcharts.src", :cache => "cache-charts", :lifetime => 1.month)
+	= javascript_include_tag("racedistrib", :cache => "cache-racedistrib", :lifetime => 1.month)

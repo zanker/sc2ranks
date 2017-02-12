@@ -1,0 +1,75 @@
+- @page_title = "Starcraft league statistics"
+- cache(@page_hash, :raw => true, :expires_in => 1.day) do
+	.spacer
+	.w960
+		.shadow.divisioninfo
+			= stat_info(:text => "League", :total => @player_total, :group => @player_group, :bracket => @bracket, :is_random => @is_random, :region => @region, :activity => @activity, :expansion => @expansion)
+	.spacer
+	.w960.tblstats
+		%table.shadow{:cellspacing => "1px"}
+			%tr.header
+				%th Race distribution by league graph
+			%tr
+				%td.racegraph
+					#container.container
+
+	- if @regions[:leagues]
+		.spacer
+		.w960.tblstats
+			%table.shadow{:cellspacing => "1px"}
+				%tr.header
+					%th{:colspan => 8} League distribution
+				%tr.columns
+					%th.region Region
+					- LEAGUE_LIST.each do |league|
+						%th.league
+							= make_badge(LEAGUES[league], 4, "19x20")
+							%span= LEAGUE_NAMES[league]
+				- if @region
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.region= REGION_NAMES[@region]
+						- LEAGUE_LIST.each do |league|
+							%td= format_stat_number(@regions[:leagues][@region], league) || 0
+				- else
+					- REGIONS_GLOBAL.each do |region|
+						%tr{:class => cycle("darkbg", "lightbg")}
+							%td.region= REGION_NAMES[region]
+							- LEAGUE_LIST.each do |league|
+								%td= format_stat_number(@regions[:leagues][region], league) || 0
+
+	- LEAGUE_LIST.each do |league|
+		.spacer
+		.w960.tblstats
+			%table.shadow{:cellspacing => "1px"}
+				%tr.header
+					%th{:colspan => 6}
+						= make_badge(LEAGUES[league], 4, "21x22")
+						%div
+							= LEAGUE_NAMES[league]
+							= "(#{wrap_number(number_with_delimiter(@leagues[:races][league] && @leagues[:races][league][:total] || 0))} players)"
+				%tr.columns
+					%th.type Type
+					- RACE_LIST.each do |race|
+						%th.raceicon
+							= image_tag "#{RACES[race]}.png"
+							%span= RACE_NAMES[race]
+				- [[:races, "Distribution", "0%"], [:race_wins, "Average wins", "0%"], [:race_points, "Average points", "0"]].each do |row|
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.type
+							- if row[0] == :race_wins
+								- if league >= LEAGUES["master"]
+									#{row[1]}
+								- else
+									Total wins
+							- else
+								#{row[1]}
+						- RACE_LIST.each do |race|
+							- if row[0] == :race_wins && league < LEAGUES["master"]
+								%td= format_stat_number(@leagues[row[0]][league], race, true) || 0
+							- else
+								%td= format_stat_number(@leagues[row[0]][league], race) || row[2]
+							
+
+	= create_league_race_distribution(@leagues[:races])
+	= javascript_include_tag("highcharts.src", :cache => "cache-charts", :lifetime => 1.month)
+	= javascript_include_tag("racedistrib", :cache => "cache-racedistrib", :lifetime => 1.month)

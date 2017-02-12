@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+puts "Loading achievement data"
+
+offset = ARGV.first.to_i
+has_data = true
+
+puts "Starting at offset #{offset}"
+while( has_data ) do
+	has_data = nil
+	Character.all(:conditions => "achievement_points > 0 AND updated_achievements IS NULL", :limit => 500, :offset => offset, :order => "achievement_points DESC").each do |character|
+		has_data = true
+		
+		begin
+			job_args = {:region => character.region, :bnet_id => character.bnet_id, :name => character.name}
+			method, url_args = Jobs::PullAchievements.get_url(job_args)
+			
+			response, url = Armory::Node.pull_custom_data(character.region, url_args)
+			doc = response && Nokogiri::HTML(response)
+			next if response.blank? || doc.nil?
+
+			print "Pulling #{character.region.upcase}-#{character.name} (#{character.achievement_points} points)... "
+			
+			start_time = Time.now.to_f
+			Jobs::PullAchievements.parse(job_args, doc, response)
+		
+			puts "finished %.2f seconds" % [Time.now.to_f - start_time]
+		rescue EOFError, OpenURI::HTTPError, Errno::ECONNRESET, Timeout::Error, SocketError, Errno::ECONNREFUSED, Errno::ETIMEDOUT, Errno::EHOSTUNREACH, Errno::ENETUNREACH => e
+			puts "Error pulling #{character.region.upcase}-#{character.name} (#{character.achievement_points} points)"
+			puts "#{e.class}: #{e.message} (#{url})"
+			next
+		end
+	end
+	
+	offset += 500
+	puts "Loaded #{offset}"
+end

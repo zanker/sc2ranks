@@ -1,0 +1,5 @@
+- @page_title = "Profile error"
+.w960
+	.shadow.error
+		%h1 Error
+		%p Failed to load #{params[:region].upcase}-#{params[:name].capitalize}: #{error_message(@error)}

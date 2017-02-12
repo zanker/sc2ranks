@@ -1,0 +1,11 @@
+!!! XML 
+%atom{:xmlns => "http://www.w3.org/2005/Atom"}
+	%title Last 25 matches for #{@character.name}
+	%link{:rel => "self", :href => character_url(@character.region, @character.bnet_id, @character.name)}
+	%updated= @character.updated_at
+	
+	- @matches.each do |match|
+		%entry
+			%title= feed_map_name(match)
+			%id= "tag:sc2ranks.com,match,feed,#{match.id}"
+			%updated= match.played_on

@@ -1,0 +1,41 @@
+- @page_title = "#{@region ? REGION_NAMES[@region] : "Global"} #{@is_random ? "R " : ""}#{@bracket}v#{@bracket} division rankings#{@offset > 0 ? " (page #{(@offset / 100).ceil + 1})" : ""}"
+- cache(@page_hash, :raw => true, :expires_in => 10.minutes) do
+	- if @stats
+		.w960
+			.shadow.divisioninfo= division_stats(@stats)
+		.spacer
+	.w960
+		= build_pagination(PAGINATION[:default], @total_divs, "paginate-top")
+		.clearb
+		%table.shadow.divisions#sortlist{:cellspacing => "1px"}
+			%tr
+				%th#rank Rank
+				- unless @region
+					%th#region Region
+				%th#division Name
+				%th#points Avg points
+				%th#games Avg games
+				%th#ratio Avg wins
+				%th#teams Teams
+				%th#age Age
+			- @rankings.each do |division|
+				%tr{:class => "tblrow#{division[:row_num]} #{cycle("darkbg", "lightbg")}"}
+					%td.rank= division[:rank]
+					- unless @region
+						%td.region= can_link_to(division.region.upcase, rank_filter_divisions_path(division.region, division.league, division.bracket, params[:sort], 0))
+					%td.division= can_link_to(division.simple_name, rank_division_path(division.id, parameterize(division.name)))
+					%td.points= number_with_delimiter(division.average_points)
+					%td.games= number_with_delimiter(division.average_games)
+					%td.ratio= "%.2f%%" % [division.average_wins * 100]
+					%td.teams= number_with_delimiter(division.total_teams)
+					%td.age= short_relative_time(division.updated_at)
+			- if @rankings.length == 0
+				%tr.darkbg
+					%td{:colspan => 8} Cannot find any divisions, please try less restrictive filtering.
+			
+		= build_pagination(PAGINATION[:default], @total_divs, "paginate-bottom")
+		= javascript_include_tag("sorttable", :cache => "cache-sorttable", :lifetime => 1.month)
+		:javascript
+			var bracket = 0
+			setup_table()
+	.clearb

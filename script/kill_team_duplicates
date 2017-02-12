@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+#SELECT COUNT(*), team_id, character_id FROM team_characters GROUP BY team_id, character_id HAVING COUNT(*) > 1;
+TeamCharacter.all(:select => "COUNT(*) as total, team_id, character_id", :group => "team_id, character_id", :having => "COUNT(*) > 1").each do |team|
+	relation = TeamCharacter.first(:conditions => {:team_id => team.team_id.to_i, :character_id => team.character_id.to_i})
+	next unless relation
+	
+	puts "Found duplicate ##{relation.id}, #{relation.character_id} for team #{relation.team_id}. Has #{team.total.to_i} duplicates. Nuked one."
+	relation.delete
+end
+
+
+
+

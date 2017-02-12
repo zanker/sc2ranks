@@ -1,0 +1,87 @@
+- @page_title = "#{@character.name}'s profile"
+- @page_rss = tag(:link, :rel => "alternate", :title => "#{@character.name}'s match history RSS", :href => match_history_feed_url(@character.id, "rss"), :type => "application/rss+xml")
+- @page_atom = tag(:link, :rel => "alternate", :title => "#{@character.name}'s match history Atom", :href => match_history_feed_url(@character.id, "atom"), :type => "application/atom+xml")
+- cache("teams/#{@character.cache_key}/#{@character.season}/#{Rails.cache.read("logs/generated", :raw => true, :expires_in => 48.hours)}", :raw => true, :expires_in => 4.hours) do
+	.charprofile
+		= render :partial => "character_header", :locals => {:character => @character, :team_stats => @team_stats}
+		- if Vod.exists?(["player_one_id = ? OR player_two_id = ?", @character.id, @character.id])
+			.spacer
+			.vods.w960
+				%table.shadow{:cellspacing => "1px"}
+					%tr
+						%th.vodheader.toggleheader{:colspan => 6}
+							%div.toggleclick.dumbtoggle +
+							%label Last 10 vods
+							%div.vodsites Source: #{link_to("SC2Casts", "http://sc2casts.com")}
+					%tr.invisible.columns
+						%th.view View
+						%th.players Team 1
+						%th.players Team 2
+						%th.caster Caster
+						%th.round Event
+						%th.bestof Type
+					- Vod.all(:conditions => ["player_one_id = ? OR player_two_id = ?", @character.id, @character.id], :include => [:player_one_char, :player_two_char], :limit => 10).each do |vod|
+						%tr.invisible{:class => cycle("darkbg", "lightbg")}
+							%td.view= link_to("View", vod.series_url)
+							= vod_players(vod)
+							%td.caster
+								= link_to(vod.caster, vod.caster_url, :class => :nolink)
+							%td.round
+								= link_to(vod.round, vod.event_url, :class => :nolink)
+							%td.bestof
+								- if vod.best_of_type == 0
+									%span.nolink= "Game #{vod.best_of}"
+								- elsif vod.best_of_type == 2 or vod.best_of_type == 1
+									%span.nolink= "Best of #{vod.best_of}"
+								- else
+									Unknown
+								
+					
+		- if @character.replays.exists?
+			.spacer
+			.replays.w960
+				%table.shadow{:cellspacing => "1px"}
+					%tr
+						%th.replayheader.toggleheader{:colspan => 6}
+							%div.toggleclick.dumbtoggle +
+							%label Last 10 replays
+							= replay_sites(@replays)
+					%tr.columns.invisible
+						%th.view View
+						%th.players Team 1
+						%th.players Team 2
+						%th.rmap Map
+						%th.rbracket Bracket
+						%th.age.rage Date
+					- @replays.each do |replay|
+						%tr.invisible{:class => cycle("darkbg", "lightbg")}
+							%td.view= link_to("View", replay.site_url)
+							= replay_players(replay)
+							%td.rmap
+								= link_to(replay.map.name, map_info_path(replay.map.id, parameterize(replay.map.name)))
+							%td.rbracket= replay_bracket(replay.bracket)
+							%td.age.rage= day_words_or_time(replay.played_on)
+		
+		- team_ids = TeamCharacter.all(:select => "team_id", :conditions => "character_id = #{@character.id}").map {|tc| tc.team_id}
+		- if team_ids.length > 0
+			= build_full_teams(Team.all(:include => [:rankings, :characters, :division], :conditions => ["teams.id IN(?) AND teams.season = ? AND teams.division_id IS NOT NULL", team_ids, @character.season]))
+		- else
+			.spacer
+			.leagues.w960
+				.message.shadow
+					#{@character.name} has not played any league games yet, or has not finished their placement matches.
+	
+		- if Team.count(:conditions => ["id IN(?) AND season = ? AND division_id IS NOT NULL", team_ids, @character.season]) == 1
+			- team = Team.first(:conditions => ["id IN(?) AND season = ? AND division_id IS NOT NULL", team_ids, @character.season])
+			- if team	
+				.spacer
+					.w960.teamgraph.shadow
+						%h1.header
+							Team points and world ranking graph
+							.right#historypicker= build_history_picker()
+						#container
+				= build_team_graph(team)
+				= javascript_include_tag("highcharts.src", :cache => "cache-charts", :lifetime => 1.month)
+				= javascript_include_tag("teamhistory", :cache => "cache-teamhistory", :lifetime => 1.month)
+	:javascript
+		$("#relative").html(relative_time(#{@character.updated_at.to_i}))

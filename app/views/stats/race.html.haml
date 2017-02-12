@@ -1,0 +1,23 @@
+- @page_title = "Starcraft race statistics"
+- cache(@page_hash, :raw => true, :expires_in => 1.day) do
+	.spacer
+	.w960
+		.shadow.divisioninfo
+			= stat_info(:text => "Race", :total => @player_total, :bracket => @bracket, :is_random => @is_random, :region => @region, :activity => @activity, :expansion => @expansion)
+	- LEAGUE_LIST.each do |league|
+		- next if @stats[league].nil?
+		.spacer
+		.w960.tblstats
+			%table.shadow{:cellspacing => "1px"}
+				%tr.header
+					%th.league
+						= make_badge(LEAGUES[league], 4, "19x20")
+						%span= LEAGUE_NAMES[league]
+					%th Race distribution (#{wrap_number(number_with_delimiter(@stats[league]))} players)
+				%tr
+					%td.pointsgraph{:colspan => 2}
+						%div{:id => "container#{league}", :class => "container"}
+							.loading Loading, this may take a second.
+	= create_points_race_distribution(@races)
+	= javascript_include_tag("highcharts.src", :cache => "cache-charts", :lifetime => 1.month)
+	= javascript_include_tag("racepointsdistrib", :cache => "cache-racepointsdistrib", :lifetime => 1.month)

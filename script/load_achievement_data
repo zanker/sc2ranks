@@ -1,0 +1,113 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+require "uri"
+require "config/initializers/jobs.rb"
+require "nokogiri"
+
+categories = [3211278,3211279,3211280,3211281,3211282,3211283,3211284,3211285,4325398,4325399,4325400,4325401,4325392,4325395,4325396,4325402,4325397,4325386,4325387,4325388,4325389,4325390,4325378,4325385,4325391,3211270,3211271,3211272,4325394]
+
+achievement_data = {}
+
+url_args = ["profile", 738095, LOCALE_IDS["us"], URI.escape("Shadowed"), "achievements", "category", 0]
+categories.each do |category_id|
+	puts "Pulling category #{category_id}"
+	url_args[url_args.length - 1] = category_id
+	begin
+		cat_response, url = Armory::Node.pull_custom_data("us", url_args)
+		cat_doc = Nokogiri::HTML(cat_response)
+	
+		next if cat_response.blank? && cat_doc.blank?
+	rescue EOFError, OpenURI::HTTPError => e
+		puts "#{e.class}: #{e.message} (#{url})"
+		next
+	end
+	
+	# Do this in sections instead of one mass transaction
+	cat_doc.xpath("//div[@id='achievements-wrapper']/div").each do |achievement_doc|
+		bnet_id = achievement_doc.attr("id").match(/([0-9]+)/)[1].to_i
+		icon = achievement_doc.css("div > .icon").inner_html
+		
+		icon_id = icon.match(/achievements-([0-9]+)-([0-9]+)\.jpg/)
+		sprite_loc = icon.match(/\) (-[0-9]+|[0-9]+)px (-[0-9]+|[0-9]+)px/s)
+		
+		meta_data = achievement_doc.css(".inner > .meta").text.strip.split("\r\n")
+		points = meta_data[0].strip.to_i
+
+		next unless bnet_id && points && icon && icon_id && sprite_loc
+		
+		image_size = icon_id[2].to_i
+		icon_x = sprite_loc[1].to_i
+		icon_y = sprite_loc[2].to_i
+
+		achievement_id = Achievement.id_from_sprite(icon_id[1].to_i, icon_x, icon_y, image_size)
+		data = achievement_doc.css(".desc").text.strip.split("\r\n")
+				
+		# Figure out progress, type of achievemen ttoo
+		points_finished = 0
+		is_meta = false
+		
+		# Check for progression criteria, eg win 50 games, progress 25 / 50
+		progress_data = achievement_doc.css("div.achievements-progress > span").text.split("/")
+		if progress_data.length > 0
+			points_finished = progress_data[1].strip.to_i
+		else
+			# Check for meta criteria
+			progress = achievement_doc.css("div.series-criteria > ul > li.earned").length
+			points_finished = achievement_doc.css("div.series-criteria > ul > li").length
+			
+			# Check for meta criteria (another type), but is completed
+			if points_finished > 0 && progress == 0
+				progress = achievement_doc.css("div.series-criteria > ul > li.list-badge").length
+			end
+			
+			is_meta = true if progress > 0 || points_finished > 0
+		end
+
+		# Save achievement data
+		achievement_data[achievement_id] = {:name => CGI.unescape(data[0]).strip, :description => CGI.unescape(data[1]).strip, :bnet_id => bnet_id, :category_id => category_id, :icon_row => Achievement.row_from_y(icon_y, image_size), :icon_column => Achievement.column_from_x(icon_x, image_size), :icon_id => icon_id[1].to_i, :finished_at => points_finished, :is_meta => is_meta, :points => points}
+		
+		puts "Found #{achievement_id}, #{achievement_data[achievement_id][:name]}"
+		
+		# Figure out if it's a series
+		series_id = nil
+		series_list = achievement_doc.css("div.series > div.series-content > div.series-tiles > div")
+		if series_list.length > 0
+			# Set the first achievement to be the series master
+			series_id = achievement_id
+			achievement_data[achievement_id][:series_id] = series_id
+			
+			# Grab them all
+			series_list.each do |tile_doc|
+				# We can't get when an achievement is earned, so we have to cheat and say it's when we saw it
+				tile_earned = tile_doc.attr("class").match(/tile\-locked/) ? false : true
+				
+				bnet_id = tile_doc.attr("id").match(/([0-9]+)/)[1].to_i
+				tile_points = tile_doc.css(".series-badge").text.to_i
+				
+				tile_icon = tile_doc.css(".portrait-c").inner_html
+				icon_id = tile_icon.match(/achievements-([0-9]+)-([0-9]+)\.jpg/)
+				sprite_loc = tile_icon.match(/\) (-[0-9]+|[0-9]+)px (-[0-9]+|[0-9]+)px/s)
+				
+				next unless bnet_id && tile_points && tile_icon && icon_id && sprite_loc
+
+				image_size = icon_id[2].to_i
+				icon_x = sprite_loc[1].to_i
+				icon_y = sprite_loc[2].to_i
+
+				achievement_id = Achievement.id_from_sprite(icon_id[1].to_i, icon_x, icon_y, image_size)
+				
+				data = tile_doc.css("#series-tooltip-#{bnet_id}").text.strip.split("\r\n")
+				
+				# Set series data
+				achievement_data[achievement_id] = {:name => CGI.unescape(data[0].strip), :description => CGI.unescape(data.last.strip), :bnet_id => bnet_id, :category_id => category_id, :icon_row => Achievement.row_from_y(icon_y, image_size), :icon_column => Achievement.column_from_x(icon_x, image_size), :icon_id => icon_id[1].to_i, :is_meta => false, :points => tile_points, :series_id => series_id}
+			end
+		end
+	end
+end
+
+puts "Flushing"
+Jobs::PullAchievements.flush_achievements("us", achievement_data)

@@ -1,0 +1,41 @@
+- @page_title = "Searching for #{params[:name]}"
+- cache(@page_hash, :raw => true, :expires_in => 1.hour) do
+	.w960
+		= build_pagination(PAGINATION[:default], @total_chars, "paginate-top")
+		.clearb
+		%table.shadow.search#sortlist{:cellspacing => "1px"}
+			%tr
+				%th#region Region
+				%th#character0 Character
+				%th#points Points
+				%th#wins Wins
+				%th#losses Losses
+				%th#ratio Ratio
+				%th#division Division
+				%th#age Last updated
+			- @char_list.each do |character|
+				%tr{:class => "tblrow #{cycle("darkbg", "lightbg")}"}
+					%td.region= SHORT_REGIONS[character.rank_region]
+					%td.character0= link_to character.full_name, character_path(character.region, character.bnet_id, character.name)
+					%td.points
+						= team_badge(character[:team], "16x17")
+						%span.number= number_with_delimiter(character[:team].points)
+						%span (#{character[:team].bracket}v#{character[:team].bracket})
+					%td.wins.green= number_with_delimiter(character[:team].wins)
+					%td.losses.red= number_with_delimiter(character[:team].losses)
+					%td.ratio= "%.2f%%" % [character[:team].win_ratio * 100]
+					%td.division
+						= link_to character[:team].division.simple_name, rank_division_path(character[:team].division.id)
+						(##{character[:team].division_rank})
+					%td{:class => "age jstime #{character.updated_at.to_i}"}
+						= distance_in_words(Time.now.utc - character.updated_at)
+						ago
+			- if @char_list.length == 0
+				%tr.darkbg
+					%td{:colspan => 8} Cannot find any players.
+		= build_pagination(PAGINATION[:default], @total_chars, "paginate-bottom")
+		= javascript_include_tag("sorttable", :cache => "cache-sorttable", :lifetime => 1.month)
+		:javascript
+			var bracket = 1
+			setup_table()
+	.clearb

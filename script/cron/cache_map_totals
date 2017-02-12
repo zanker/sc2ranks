@@ -1,0 +1,24 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+start_time = Time.now.to_f
+
+blacklist = Time.parse("2011-03-01 00:00:00").utc.to_s(:db)
+
+ActiveRecord::Base.connection.execute("UPDATE match_totals SET total_games = matches.total_games FROM (SELECT COUNT(*) as total_games, map_id, played_on FROM match_histories GROUP BY map_id, played_on) as matches WHERE match_totals.map_id=matches.map_id AND match_totals.stat_date=matches.played_on");
+
+puts "Finished per-date total in %.2f minutes" % [(Time.now.to_f - start_time) / 60]
+start_time = Time.now.to_f
+
+ActiveRecord::Base.connection.execute("UPDATE match_totals SET total_games = matches.total_games FROM (SELECT SUM(total_games) as total_games, map_id FROM match_totals WHERE match_totals.stat_date IS NOT NULL GROUP BY map_id) as matches WHERE match_totals.map_id=matches.map_id AND match_totals.stat_date IS NULL");
+
+puts "Finished total in %.2f minutes" % [(Time.now.to_f - start_time) / 60]
+
+start_time = Time.now.to_f
+
+ActiveRecord::Base.connection.execute("ANALYZE match_totals")
+
+puts "Finished analyzing in %.2f minutes" % [(Time.now.to_f - start_time) / 60]

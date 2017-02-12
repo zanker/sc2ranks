@@ -1,0 +1,117 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "cgi"
+
+def pull_division(region, char_bnet_id, char_name, division_bnet_id)
+	@url = "#{BNET_URLS[region]}/sc2/#{LOCALES[region]}/profile/#{char_bnet_id}/#{LOCALE_IDS[region]}/#{URI.escape(char_name)}/ladder/#{division_bnet_id}"
+	return Armory::Node.inflate_response(open(@url,
+		"Cookie" => "int-SC2=1",
+		"User-Agent" => "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_4; en-US) AppleWebKit/534.3 (KHTML, like Gecko) Chrome/6.0.464.0 Safari/534.3",
+		"Accept-Encoding" => "gzip,deflate"))
+end
+
+conditions = ["replays.bracket = '?v?' AND teams.is_random = ? AND replay_characters.team_id > 0", 1, 1, false]
+conditions.first << " AND teams.league = ? "
+conditions.push(5)
+
+joins = "JOIN replay_characters ON replay_characters.replay_id=replays.id JOIN teams ON teams.id=replay_characters.team_id"
+
+division_list = {}
+Replay.all(:select => "replay_characters.character_id as character_id, teams.division_id as division_id", :conditions => conditions, :joins => joins).each do |replay|
+	puts "#{replay.character_id} / #{replay.division_id}"
+	
+	character = Character.first(:conditions => ["id = ?", replay.character_id.to_i])
+	division = Division.first(:conditions => ["id = ?", replay.division_id.to_i])
+	division_list[division.bnet_id] = character
+end
+
+pull_time = Time.now.to_f
+retries = 0
+total_requests = 0
+division_list.each do |division_id, character|
+	if retries > 3
+		puts "Hit limit on retries, going to next one."
+		retries = 0
+		next
+	elsif retries > 0
+		puts "Retrying #{retries}"
+	else
+		puts "Updating division #{division_id}, #{character.region.upcase}-#{character.name} ##{character.bnet_id}"
+	end
+	
+	id_blacklist = []
+	begin
+		id_blacklist.push(character.id)
+		
+		total_requests += 1
+		content = pull_division(character.region, character.bnet_id, character.name, division_id)
+	rescue OpenURI::HTTPError => e
+		puts e
+		puts @url
+
+		# Maintenance
+		next if e.io.status[0].to_i == 500
+		
+		# Not found, find someone else
+		if e.io.status[0].to_i == 404
+			puts "Cannot find #{character.region.upcase}-#{character.name} ##{character.bnet_id}, trying someone else"
+			
+			character = Character.first(:conditions => ["characters.id NOT IN (?) AND characters.region = ? AND divisions.bnet_id = ?", id_blacklist, character.region, division_id], :joins => "LEFT JOIN team_characters ON team_characters.character_id = characters.id LEFT JOIN teams ON teams.id = team_characters.team_id LEFT JOIN divisions ON divisions.id=teams.division_id")
+			
+			
+			if character.nil?
+				puts "Cannot find replacement"
+				next
+			end
+			
+			puts "Found #{character.region.upcase}-#{character.name} ##{character.bnet_id}"
+		end
+		
+		retries += 1
+		retry if retries <= 3
+	# Catch all
+	rescue Exception => e
+		puts e
+		puts @url
+		
+		retries += 1
+		retry if retries <= 3
+	end
+	
+	# Do our basic error checking
+	if content.blank?
+		puts "No content response"
+		next
+	end
+	
+	if content.match(/maintenancelogo/) || content.match(/thermaplugg/) || content.match(/error\-header/)
+		puts "Got a maintenance response"
+		next
+	end
+	
+	doc = Nokogiri::HTML(content)
+	if doc.blank?
+		puts "Nokogiri failed to parse"
+		next
+	end
+	
+	begin
+		status = Jobs::DivisionChars.parse({:region => character.region, :char_bnet_id => character.bnet_id, :char_name => character.name, :bnet_id => division_id, :block_queues => true}, doc, content)
+		if status == "corrupted"
+			puts "Corrupted data"
+		end
+	rescue Exception => e
+		puts e
+		puts @url
+	end
+	
+	retries = 0
+end
+
+# Force update
+puts "Finished in %.2f minutes, total %d divisions with an of average %.2f seconds" % [(Time.now.to_f - start_time) / 60, total_requests, (Time.now.to_f - pull_time) / total_requests ]
+

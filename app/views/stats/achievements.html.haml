@@ -1,0 +1,25 @@
+- @page_title = "Starcraft achievement statistics"
+- cache(@page_hash, :raw => true, :expires_in => 1.day) do
+	.w960
+		.shadow.divisioninfo
+			Showing achievement stats in #{wrap_number(@region ? REGION_NAMES[@region] : "every region")} for #{wrap_number(number_with_delimiter(@total_players))} players
+	.w960.achievements.achievementstats
+		.ptabs
+			- ACHIEVEMENT_CATEGORIES.each do |achievement_id, name|
+				%span.ptab{:onclick => "location.href=\"#{stats_achievements_path(params[:region], achievement_id)}\"", :class => (achievement_id == @category_id) && "selected" || ""}
+					%span.text= name
+		%table.shadow{:cellspacing => "1px"}
+			- @achievements.each do |achievement|
+				%tr{:class => cycle("darkbg", "lightbg")}
+					%td.icon{:rowspan => 2}
+						%span.icon{:style => "background: url(\"/images/#{achievement.image_name(:small)}\") no-repeat scroll #{achievement.sprite_location(:small)} transparent; width: #{achievement.image_size(:small)}px; height: #{achievement.image_size(:small)}px;", :class => "borderedicon"}
+					%td.name= link_to(achievement.name, achievement_ranks_path(achievement.achievement_id, parameterize(achievement.name)))
+					%td.percent
+						- if @achievement_totals[achievement.achievement_id] > 1
+							= "#{wrap_number("%s")} players have this (#{wrap_number("%.2f%")})" % [number_with_delimiter(@achievement_totals[achievement.achievement_id]), (@achievement_totals[achievement.achievement_id] / @total_players.to_f) * 100]
+						- elsif @achievement_totals[achievement.achievement_id] == 1
+							= "#{wrap_number("1")} player has this (#{wrap_number("%.2f%")})" % [1, (@achievement_totals[achievement.achievement_id] / @total_players.to_f) * 100]
+						- else
+							Nobody has earned this yet
+				%tr{:class => current_cycle}
+					%td.description.deschighlight{:colspan => 2}= achievement.description

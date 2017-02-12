@@ -1,0 +1,18 @@
+- @page_title = "Starcraft league statistics"
+- cache(@page_hash, :raw => true, :expires_in => 1.day) do
+	.w960
+		.shadow.divisioninfo
+			= stat_info(:text => "Top 100 most popular name", :league => @league, :bracket => @bracket, :is_random => @is_random, :region => @region)
+	.spacer
+	.stats.w960
+		%table.namestats.shadow{:cellspacing => "1px"}
+			%tr.columns
+				%th.rank Popularity
+				%th.name Name
+				%th.total Total
+			- @names.each_index do |id|
+				- name_stats = @names[id]
+				%tr{:class => cycle("darkbg", "lightbg")}
+					%td.rank= number_with_delimiter(id + 1)
+					%td.name= name_stats[:name]
+					%td.total.number= number_with_delimiter(name_stats[:total])

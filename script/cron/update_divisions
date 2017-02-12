@@ -1,0 +1,142 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "cgi"
+
+RETRY_LIMIT = 5
+@url = nil
+puts "Trickle updating characters for 15 minutes"
+
+def pull_division(region, char_bnet_id, char_name, division_bnet_id)
+	@url = "profile/#{char_bnet_id}/#{LOCALE_IDS[region]}/#{URI.escape(char_name)}/ladder/#{division_bnet_id}"
+	Armory::Node.cron_pull(region, @url)
+end
+
+pull_time = Time.now.to_f
+retries = 0
+total_requests = 0
+
+regcon = Rails.cache.read("maint/checks")
+regcon = regcon.blank? ? "" : " AND #{regcon}"
+
+division_blacklist = []
+character_blacklist = [-1]
+while( (Time.now.to_f - pull_time) <= 45.minutes ) do
+	# Grab 5 divisions, then grab 5 more and repeat to keep the data 'fresh'
+	if division_blacklist.length > 0
+		conditions = ["league != ? AND total_teams > ? AND updated_at < ? AND id NOT IN (?)#{regcon}", LEAGUES["grandmaster"], 0, 12.hours.ago, division_blacklist]
+	else
+		conditions = ["league != ? AND total_teams > ? AND updated_at < ?#{regcon}", LEAGUES["grandmaster"], 0, 12.hours.ago]
+	end
+		
+	division_list = {}
+	Division.all(:select => "id as div_id, bnet_id", :conditions => conditions, :order => "updated_at ASC", :limit => 5).each do |division|
+		division_list[division.div_id.to_i] = division.bnet_id.to_i
+	end
+	
+	if division_list.length == 0
+		puts "No more divisions to update, done early!"
+		break
+	end
+	
+	retries = 0
+	division_list.each do |division_id, division_bnet_id|
+		# For the sake of getting character codes, grab people without them first when doing the update, then fall back to anyone
+		characters = Character.all(:select => "characters.*", :joins => "LEFT JOIN team_characters ON team_characters.character_id=characters.id LEFT JOIN teams ON teams.id=team_characters.team_id", :conditions => ["character_code is null AND teams.division_id = ? AND characters.id NOT IN (?)", division_id, character_blacklist], :limit => RETRY_LIMIT)
+		if characters.length == 0
+			characters = Character.all(:select => "characters.*", :joins => "LEFT JOIN team_characters ON team_characters.character_id=characters.id LEFT JOIN teams ON teams.id=team_characters.team_id", :conditions => ["teams.division_id = ? AND characters.id NOT IN (?)", division_id, character_blacklist], :limit => RETRY_LIMIT)	
+		end
+		
+		if characters.length == 0
+			puts "Dead division, no character found #{division_id} bnet #{division_bnet_id}."
+			Division.update(division_id, {:total_teams => 0, :min_points => 0, :max_points => 0, :average_points => 0, :average_wins => 0, :average_games => 0})
+			next
+		end
+		
+		character = characters.first
+	
+		if retries > RETRY_LIMIT
+			puts "Updating division #{division_id}, #{character.region.upcase}-#{character.name} ##{character.bnet_id}"
+			puts "Hit limit on retries, going to next one."
+			division_blacklist.push(division_id)
+			retries = 0
+			next
+		elsif retries > 0
+			puts "Retrying #{retries}"
+		end
+	
+		begin
+			puts "Updating division #{division_id}, #{character.region.upcase}-#{character.name} ##{character.bnet_id}"
+
+			total_requests += 1
+			content = pull_division(character.region, character.bnet_id, character.name, division_bnet_id)
+		rescue Interrupt => e
+			puts "Interrupted"
+			return
+		rescue OpenURI::HTTPError => e
+                        if e.message == "500"
+                                character.updated_at = Time.now.utc
+                                character.save(:validate => false)
+                        end		
+			puts e
+			puts @url
+			
+			character_blacklist.push(character.id)
+			
+			# Try anotehr character
+			characters.delete_at(0)
+			character = characters.first
+
+			# Maintenance
+			next if e.message == "500" || character.nil?
+		
+			retries += 1
+			retry if retries <= RETRY_LIMIT
+		# Catch all
+		rescue Exception => e
+			puts e
+			puts @url
+		
+			retries += 1
+			retry if retries <= RETRY_LIMIT
+		end
+	
+		# Do our basic error checking
+		if content.blank?
+			puts "No content response"
+			next
+		end
+	
+		if content.match(/maintenancelogo/) || content.match(/thermaplugg/) || content.match(/error\-header/)
+			puts "Got a maintenance response"
+			next
+		end
+	
+		doc = Nokogiri::HTML(content)
+		if doc.blank?
+			puts "Nokogiri failed to parse"
+			next
+		end
+	
+		begin
+			status = Jobs::DivisionChars.parse({:region => character.region, :char_bnet_id => character.bnet_id, :char_name => character.name, :bnet_id => division_bnet_id, :cascade => false}, doc, content)
+			if status == "corrupted"
+				puts "Corrupted data"
+			elsif status != "done"
+				puts "Returned #{status}"
+			end
+		rescue Exception => e
+			puts e
+			puts @url
+		end
+	
+		division_blacklist.push(division_id)
+		retries = 0
+	end
+end
+
+puts "Finished in %.2f minutes, total %d divisions with an of average %.2f seconds" % [(Time.now.to_f - pull_time) / 60, total_requests, (Time.now.to_f - pull_time) / total_requests]
+

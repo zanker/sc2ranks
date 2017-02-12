@@ -1,0 +1,24 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "cgi"
+
+begin
+	response = open("https://api.twitter.com/1/statuses/user_timeline/sc2ranks.json?count=10")
+
+	ActiveSupport::JSON.decode(response.read).each do |tweet|
+		next unless tweet["in_reply_to_user_id"].blank?
+		open(File.join(Rails.root, "public", "last_tweet"), "w+") do |file|
+			file.write({:text => tweet["text"], :created_at => tweet["created_at"]}.to_yaml)
+		end
+		break
+	end
+rescue Exception => e
+	puts "#{e.class}: #{e.message}"
+	puts e.backtrace
+end
+
+

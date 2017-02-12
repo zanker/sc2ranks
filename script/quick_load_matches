@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "net/http"
+
+map_names = {}
+request_id = 0
+
+Character.all(:conditions => {:region => "tw"}, :order => "id ASC", :limit => 5000).each do |character|
+	begin
+		cat_response, url= Armory::Node.pull_custom_data(character.region, ["profile", character.bnet_id, LOCALE_IDS[character.region], URI.escape(character.name), "matches"]).to_s
+		doc = Nokogiri::HTML(cat_response)
+	
+		doc.xpath("//tr[starts-with(@class, 'match-row')]").each do |match_doc|
+			name = CGI.unescape(match_doc.css("td")[1].text())
+			bracket = match_doc.css("td")[2].inner_html().match(/([0-9]+)/)[1].to_i
+		
+			next if MAP_LOCALIZATIONS[name]
+		
+			map_names[bracket] ||= {}
+			map_names[bracket][name] = true
+		end
+	rescue Exception => e
+		puts "#{e.class}: #{e.message}"
+		puts "#{character.bnet_id} - #{character.region} - #{character.name}"
+	end
+	
+	request_id += 1
+	puts "[#{request_id}] Got map names #{character.region.upcase}-#{character.name}"
+end
+
+map_names.each do |bracket, list|
+	puts "---------------"
+	puts "Bracket #{bracket}v#{bracket}"
+	list.keys.each do |name|
+		puts name
+	end
+end

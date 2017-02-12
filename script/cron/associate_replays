@@ -1,0 +1,47 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "cgi"
+
+puts "Associating replay characters"
+
+start_time = Time.now.to_f
+associated = 0
+
+Replay.all(:select => "DISTINCT ON(replays.id) replays.*", :conditions => "( replay_characters.team_id IS NULL OR replay_characters.team_id = 0 ) AND replays.bracket != 'ffa'", :joins => "JOIN replay_characters ON replay_characters.replay_id=replays.id", :include => :replay_characters).each do |replay|
+	
+	sides = {}
+	replay.replay_characters.each do |relation|
+		next if relation.team_id
+		sides[relation.side_id] ||= []
+		sides[relation.side_id].push(relation.character_id)
+	end
+
+	# Means it's vs computer
+	next if sides.length != 2
+
+	sides.each do |side_id, character_ids|
+		is_random = ( character_ids.length == 1 and replay.bracket != "1v1" ? true : false )
+		need_chars = ( is_random ? 1 : replay.bracket.to_i )
+
+		team = TeamCharacter.first(:select => "teams.id as team_id", :conditions => ["character_id IN(?) AND teams.bracket = ? AND teams.is_random = ?", character_ids, replay.bracket.to_i, is_random], :joins => "JOIN teams ON teams.id=team_characters.team_id", :group => "teams.id HAVING(COUNT(*)) = #{need_chars}")
+		if team
+			ReplayCharacter.update_all("team_id = #{team.team_id.to_i}", "side_id = #{side_id} AND replay_id = #{replay.id}")
+			associated += 1
+			sides[side_id] = true
+		end
+	end
+
+	sides.each do |side_id, flag|
+		unless flag.is_a?(TrueClass)
+			ReplayCharacter.update_all("team_id = -1", "side_id = #{side_id} AND replay_id = #{replay.id}")
+		end
+	end
+end
+
+puts "Associated #{associated} replays with teams."
+puts "Finished in %.2f seconds" % [Time.now.to_f - start_time]
+

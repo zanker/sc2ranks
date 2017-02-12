@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+$season = 8
+
+puts "Storing old data for #{$season}"
+puts "Copying data in"
+
+# Copy the teams table data
+ActiveRecord::Base.connection.execute("INSERT INTO team_seasons(id, region, points, wins, losses, league, bracket, race_comp, is_random, season) SELECT id, region, points, wins, losses, league, bracket, race_comp, is_random, season FROM teams WHERE season=#{$season}")
+
+puts "Calculating rankings"
+
+start_time = Time.now.to_f
+def update_logs(league, bracket, region)
+        rank_column = region == "global" ? "world_rank" : "region_rank"
+        region_sql = region != "global" && " AND region = '#{region}'" || ""
+
+        # Do 1v1, 2v2, 3v3, 4v4 teams
+        begin
+                ActiveRecord::Base.connection.execute("UPDATE team_seasons SET #{rank_column} = t.rank FROM (SELECT id, points, rank() OVER (ORDER BY points DESC) as rank FROM team_seasons WHERE league = #{league} AND is_random = false AND season = #{$season} AND bracket = #{bracket}#{region_sql}) as t WHERE team_seasons.id=t.id")
+        rescue ActiveRecord::StatementInvalid => si
+                puts si.message
+        end
+
+
+        # Now do 2v2, 3v3, 4v4 random teams
+        if bracket > 1
+                begin
+                        ActiveRecord::Base.connection.execute("UPDATE team_seasons SET #{rank_column} = t.rank FROM (SELECT id, points, rank() OVER (ORDER BY points DESC) as rank FROM team_seasons WHERE league = #{league} AND is_random = true AND season = #{$season} AND bracket = #{bracket}#{region_sql}) as t WHERE team_seasons.id=t.id")
+                rescue ActiveRecord::StatementInvalid => si
+                        puts si.message
+                end
+        end
+end
+
+LEAGUE_LIST.each do |league|
+        BRACKETS.each do |bracket|
+                ActiveRecord::Base.transaction do
+                        REGIONS_GLOBAL.each do |region|
+                                puts "Calculating rankings for #{league}, #{bracket}, #{region}"
+				update_logs(league, bracket, region)
+                        end
+                end
+        end
+end
+
+puts "Finished!"

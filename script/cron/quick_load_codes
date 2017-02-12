@@ -1,0 +1,71 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "net/http"
+puts "Verifying characters"
+
+PER_RUN = 5000
+
+has_data = true
+offset = 0
+id = 1
+full_run = Time.now.to_f
+keep_retrying = 5
+
+puts "Starting at offset #{offset}"
+while has_data  do
+	if (full_run - Time.now.to_f) >= 18.hours
+		puts "Hit 8 hour run limit, broken off"
+		break
+	end
+	
+	has_data = nil
+	
+	puts "Loading #{offset + PER_RUN} characters..."
+	verified_chars = 0
+	
+	offset_time = Time.now.to_f
+	Character.all(:conditions => "character_code is null", :limit => PER_RUN, :offset => ARGV.first.to_i, :order => "updated_at ASC").each do |character|
+		time_taken = Time.now.to_f
+		begin
+			content, url = Armory::Node.pull_custom_data("us", ["profile", character.bnet_id, LOCALE_IDS[character.region], URI.escape(character.name), "matches"])
+			time_taken = Time.now.to_f - time_taken
+			time_taken = "%.2f" % time_taken		
+		
+			has_data = true
+
+			doc = Nokogiri::HTML(content)
+			next if doc.nil?
+
+			# Grab data
+			Jobs::Profile.save_character(character, doc, content)
+			Jobs::Profile.parse_match_history(character, doc, content)
+			
+			puts "[#{id}] [%.2f] Verified #{character.region.upcase}-#{character.name}##{character.character_code} bnet #{character.bnet_id}" % time_taken
+			verified_chars += 1
+		rescue EOFError, OpenURI::HTTPError, Errno::ECONNRESET, Timeout::Error, SocketError, Errno::ECONNREFUSED, Errno::ETIMEDOUT, Errno::EHOSTUNREACH, Errno::ENETUNREACH => e
+			# Quick hack!
+			if e.to_s.match(/404 Not Found/)
+				Jobs::Profile.increment_retries(character)
+				puts "[#{id}] Failed retry #{character.retries}, #{character.region.upcase}-#{character.name} bnet #{character.bnet_id} (#{url})"
+			else
+				puts "#{e.class}: #{e.message} (#{url})"
+			end
+		end
+		
+		id += 1
+	end
+
+	puts "Took %.2f seconds to run batch #{offset}, verified #{verified_chars} characters" % (Time.now.to_f - offset_time)
+	offset += PER_RUN
+end
+
+puts "Finished! Took %.2f seconds" % (Time.now.to_f - full_run)
+
+
+
+
+

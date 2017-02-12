@@ -1,0 +1,78 @@
+- @page_rss = tag(:link, :rel => "alternate", :title => "#{teammate_names(@team)}'s team history RSS", :href => team_history_feed_url(@team.id, "rss"), :type => "application/rss+xml")
+- @page_atom = tag(:link, :rel => "alternate", :title => "#{teammate_names(@team)}'s team history Atom", :href => team_history_feed_url(@team.id, "atom"), :type => "application/atom+xml")
+- cache(@page_hash, :raw => true, :expires_in => 12.hours) do
+	%table.teaminfo.w1140.shadow{:cellspacing => "1px"}
+		%tr{:class => cycle("darkbg", "lightbg")}
+			%td.label.badgeimg
+				%span Team
+				%div= team_badge(@team, "19x20")
+			%td= "%s %dv%d %s" % [REGION_NAMES[@team.region], @team.bracket, @team.bracket, @team.is_random ? "random" : "team"]
+			- if RAILS_ENV == "production"
+				%td.adbox.adboxbg{:rowspan => 8}
+					:javascript
+						window["a" + mbCampaignVals.r]({sz:1,w:300,h:250,s:1678,t:5,r:mbCampaignVals.r});
+		%tr{:class => cycle("darkbg", "lightbg")}
+			%td.label Last updated
+			%td
+				= "#{distance_in_words(Time.now.utc.to_i - @team.division.updated_at.to_i)} ago"
+				(last game played #{distance_in_words(Time.now.utc.to_i - @team.last_game_at.to_i)} ago)
+		%tr{:class => cycle("darkbg", "lightbg")}
+			%td.label Expansion
+			%td= EXPANSIONS[@team.expansion]		
+		%tr{:class => cycle("darkbg", "lightbg")}
+			%td.label Division
+			%td= "Rank #{wrap_number("%d")} in %s" % [@team.division_rank, (link_to @team.division.name, rank_division_path(@team.division_id))]
+		%tr{:class => cycle("darkbg", "lightbg")}
+			%td.label Joined division
+			%td= "#{distance_in_words(Time.now.utc.to_i - @team.joined_league.to_i)} ago"
+		%tr{:class => cycle("darkbg", "lightbg")}
+			%td.label Points
+			%td= "#{wrap_number("%s")} in %s" % [number_with_delimiter(@team.points), LEAGUE_NAMES[@team.league]]
+		%tr{:class => cycle("darkbg", "lightbg")}
+			%td.label.badgeimg
+				%span World rank
+				%div= team_badge(@team, "19x20")
+			%td= "#{wrap_number("#%s")} (%.2f%% of %s, %s percentile)" % [number_with_delimiter(@team.world_rank), @team.world_percentile * 100, number_with_delimiter(@team.world_competition), ((1 - @team.world_percentile) * 100).round.ordinal]
+		%tr{:class => cycle("darkbg", "lightbg")}
+			%td.label.badgeimg
+				%span Region rank
+				%div= team_badge(@team, "19x20")
+			%td= "#{wrap_number("#%s")} (%.2f%% of %s, %s percentile)" % [number_with_delimiter(@team.region_rank), @team.region_percentile * 100, number_with_delimiter(@team.region_competition), ((1 - @team.region_percentile) * 100).round.ordinal]
+		%tr{:class => cycle("darkbg", "lightbg")}
+			%td.label Stats
+			- if @team.losses == 0
+				%td{:colspan => 2}= "#{content_tag(:span, "%s", :class => "green")} won" % [number_with_delimiter(@team.wins)]
+			- else 
+				%td{:colspan => 2}= "#{content_tag(:span, "%s", :class => "green")} won, #{content_tag(:span, "%s", :class => "red")} lost, ratio of %.2f%%" % [number_with_delimiter(@team.wins), number_with_delimiter(@team.losses), @team.win_ratio * 100]
+		%tr
+			%th #{@team.bracket == 1 ? "Member" : "Members"}
+			%th{:colspan => 2}
+				&nbsp;
+			-#	Region race ranks
+		- @team.team_characters.all(:include => [:character, :team]).each do |relation|
+			- next if relation.character.nil?
+			%tr{:class => cycle("darkbg", "lightbg")}
+				%td.label.character
+					= link_to relation.character.full_name, character_path(relation.character.region, relation.character.bnet_id, relation.character.name)
+					%div= image_tag("#{RACES[relation.played_race]}.png")
+				%td{:colspan => 2}
+					&nbsp;
+				-#	= "#{wrap_number("#%s")} (%.2f%% of %s, %s percentile)" % [number_with_delimiter(relation.race_region_rank), @team.race_percentile(relation.character_id) * 100, number_with_delimiter(@team.race_competition(relation.played_race)), ((1 - @team.race_percentile(relation.character_id)) * 100).round.ordinal]
+	
+	.spacer
+	.w1140
+		.shadow.teamgraph
+			%h1.header
+				Team points and world ranking graph
+				.right#historypicker= build_history_picker()
+			#container
+	= build_team_graph(@team)	
+	= javascript_include_tag("highcharts.src", :cache => "cache-charts", :lifetime => 1.month)
+	= javascript_include_tag("teamhistory", :cache => "cache-teamhistory", :lifetime => 1.month)
+
+	-#.spacer
+	-#%table.teamhistory.w960.shadow{:cellspacing => "1px"}
+	-#	%tr.darkbg
+	-#		%th{:colspan => 4} Team history (last 5 events)
+	-#		= build_history(@team)
+

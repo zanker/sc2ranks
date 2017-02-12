@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+#return "http://#{character.region}.battle.net/sc2/#{LOCALES[character.region]}/profile/#{character.bnet_id}/#{character.unknown_id}/#{character.name}/"
+offset = 0
+has_data = true
+
+while( has_data ) do	
+	has_data = nil
+	Character.all(:offset => offset, :limit => 10000).each do |character|
+		has_data = true
+		
+		puts "http://#{character.region}.battle.net/sc2/#{LOCALES[character.region]}/profile/#{character.bnet_id}/#{character.unknown_id}/#{character.name}/"
+	end
+	
+	offset += 10000
+end
+
+
+
+
+

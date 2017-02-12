@@ -1,0 +1,78 @@
+- @page_title = "FAQ"
+.w960
+	.w960
+		.shadow.faq
+			%h1.header.darkbg.red Can you add race vs race statistics?
+			.rowsep
+			%p
+				Nope, Blizzard does not provide the information necessary to do this. You cannot get the race you played in a match, which means you can't do race vs race statistics.
+			%p
+				If Blizzard ever adds the information to make it possible, I'll add it immediately.
+	.spacer
+			
+	.w470.faqleft
+		.shadow.faq
+			%h1.header.darkbg Are points comparable across divisions?
+			.rowsep
+			%p
+				Yes, the bonus pool accrues from the start of the ladder season, rather than creation date of the division (thanks to Excalibur_Z for this info). Divisions are purely a wrapper around your league, being in Division X doesn't mean you only play with others from Division X.
+	
+	.w470.faqright
+		.shadow.faq
+			%h1.header.darkbg Isn't updating so many teams slow?
+			.rowsep
+			%p
+				Since each division has 100 teams, you can update 100 teams with one division, rather than requiring a few million queries it only needs (about) 20,000.
+
+	.w470.faqleft
+		.shadow.faq
+			%h1.header.darkbg How do rankings work?
+			.rowsep
+			%p
+				All ranks are by your league, Diamond are ranked with Diamond, Bronze with Bronze and so on. This is because 1,000 points in Bronze is not comparable to 1,000 points in Diamond.
+			%p
+				World rank is everyone on your league in every region, region rank is everyone in your league and also your region, race rank is your rank in your league and region.
+	
+	.w470.faqright
+		.shadow.faq
+			%h1.header.darkbg How often do you update?
+			.rowsep
+			%p
+				Divisions are updated every 24 hours, if a player in a division is updated manually then they will update faster than that. You can see the data status on the #{link_to("worker status", workers_path)} page.
+			%p
+				The top 100 players in 1v1 diamond will have their divisions updated every 20 minutes.
+			%p
+				You can always force a refresh of a division by going to a player inside that division and using the "Queue refresh" link.
+
+	.w470.faqleft
+		.shadow.faq
+			%h1.header.darkbg What is team history?
+			.rowsep
+			%p
+				Once every hour for the top 100 1v1 players, a snapshot of their world ranking, league and points is taken and listed in the "Details" link for their team (also shown in profile if they have only one team), letting you see how the top 100 players rankings change over time.
+			%p
+				For everyone else, they are updated every 12 hours, and world rank is included.
+
+	.w470.faqright
+		.shadow.faq
+			%h1.header.darkbg Why am I missing?
+			.rowsep
+			%p
+				Blizzard does not provide a list of every player on Starcraft 2. You can always add your name to the database manually if you can't find yourself using the "Battle.net URL" tab.
+
+	.w470.faqleft
+		.shadow.faq
+			%h1.header.darkbg Aren't the stats inaccurate?
+			.rowsep
+			%p
+				There are enough divisions and players recorded at this point, that the numbers are accurate. While they will shift gradually as trends do, or as patches come you won't see them shift drastically.
+	
+	.w470.faqright
+		.shadow.faq
+			%h1.header.darkbg Bug!
+			.rowsep
+			%p
+				Bugs can be reported through #{link_to "Get Satisfaction", "http://getsatisfaction.com/sc2ranks"}, or #{link_to "shadow@sc2ranks.com", "mailto:shadow@sc2ranks.com"}
+.clearb
+
+

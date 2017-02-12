@@ -1,0 +1,31 @@
+- @page_title = "#{@character.full_name}'s #{@map.name} stats"
+- cache("character/map/#{@character.cache_key}/#{@map.id}", :raw => true, :expires_in => 1.hours) do
+	.charprofile
+		= render :partial => "character_header", :locals => {:character => @character}
+		= build_map_stats(@map_summary)
+		- if @match_list.length > 0
+			.spacer
+			.history.w960
+				%table.shadow{:cellspacing => "1px"}
+					%tr
+						%th.matchheader{:colspan => 5}
+							%div.toggleclick.dumbtoggle#matchtogg -
+							%label Last 25 games on #{@map.name}
+					%tr.columns
+						%th.map Map
+						%th.bracket Bracket
+						%th.results Results
+						%th.points Points
+						%th.age Date
+					- @match_list.each do |match|
+						%tr{:class => cycle("darkbg", "lightbg")}
+							%td.map
+								= can_link_to(match.map.name, map_info_path(match.map.id, parameterize(match.map.name)))
+								(#{match.map.is_blizzard.blank? ? "Custom" : "Blizzard"})
+							%td.bracket= match_bracket(match)
+							%td.results= match_results(match)
+							%td.points= match_points(match)
+							%td.age= day_words_or_time(match.played_on)
+
+	:javascript
+		$("#relative").html(relative_time(#{@character.updated_at.to_i}))

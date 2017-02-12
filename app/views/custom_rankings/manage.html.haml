@@ -1,0 +1,56 @@
+- @page_title = "#{@custom.name} management"
+- form_tag custom_division_update_path, :method => :post, :onsubmit => "if( $('#deletediv').is(':checked') ) return confirm('Are you SURE you want to delete this division?')" do
+	= hidden_field_tag "id", @custom.id
+	.w960
+		.shadow.customdiv
+			%h1.header Updating custom division
+			- if @custom.is_authed?(cookies)
+				.rowsep
+				.desc.green Authorized, you can view logs or manage characters without entering your password.
+			.rowsep
+			.desc Passwords are always required to modify division settings, even after selecting "Remember me."
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Current password
+				= password_field_tag "division[auth_password]"
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Remember me?
+				= check_box_tag "division[remember]", 1, true
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Name
+				= text_field_tag "division[name]", @custom.name
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Message
+				= text_field_tag "division[message]", @custom.message
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Public division
+				= check_box_tag "division[is_public]", "1", @custom.is_public
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Show regions
+				= check_box_tag "division[show_regions]", "1", @custom.show_regions
+			-#.row{:class => cycle("darkbg", "lightbg")}
+			-#	%label Show character codes
+			-#	= check_box_tag "division[show_codes]", "1", @custom.show_codes
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Allow everyone to add characters
+				= check_box_tag "division[allow_add]", "1", @custom.allow_add
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Allow everyone to remove characters
+				= check_box_tag "division[allow_remove]", "1", @custom.allow_remove
+			.rowsep
+			.desc.number Leave blank unless you want to change the below
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Email
+				= text_field_tag "division[email]"
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Password
+				= password_field_tag "division[password]"
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Confirm password
+				= password_field_tag "division[confirm_password]"
+			.rowsep
+			.desc.red Warning, deletion is permanent. All characters added to this division will be removed from it.
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Delete custom division
+				= check_box_tag "division[delete]", 1, false, :id => "deletediv"
+			.row{:class => cycle("darkbg", "lightbg")}
+				= submit_tag "Submit"

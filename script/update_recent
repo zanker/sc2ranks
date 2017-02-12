@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "cgi"
+
+Character.all(:conditions => ["updated_at >= ? AND updated_at <= ?", 12.hours.ago.utc, 1.hour.ago]).each do |character|
+	Armory::Queue.character(:region => character.region, :bnet_id => character.bnet_id, :force => true, :priority => 50, :name => character.name)
+end

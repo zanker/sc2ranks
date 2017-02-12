@@ -1,0 +1,42 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+lock_file = "#{RAILS_ROOT}/tmp/cache-achievement-rankings.lock"
+
+if FileTest.exists?(lock_file)
+	puts "Already recaching, returned"
+	return
+end
+
+FileUtils.touch(lock_file)
+
+start_time = Time.now.to_f
+
+# Entry to add ranking info
+ActiveRecord::Base.connection.execute("INSERT INTO character_achievement_rankings(character_id) (SELECT id FROM characters WHERE NOT EXISTS (SELECT 1 FROM character_achievement_rankings WHERE character_id=characters.id))")
+
+# Actual rankings
+REGIONS_GLOBAL.each do |region|
+	rank_column = region == "global" ? "world_rank" : "region_rank"
+	region_sql = region == "global" ? "" : " AND region = '#{region}'"
+	
+	ActiveRecord::Base.connection.execute("UPDATE character_achievement_rankings SET #{rank_column} = c.rank FROM (SELECT id, achievement_points, rank() OVER (ORDER BY achievement_points DESC) as rank FROM characters WHERE achievement_points > 0#{region_sql}) as c WHERE character_achievement_rankings.character_id=c.id AND character_achievement_rankings.points != c.achievement_points")
+end
+
+puts "Finished in %.2f minutes" % [(Time.now.to_f - start_time) / 60]
+start_time = Time.now.to_f
+
+# Sync points so we reduce future updates
+ActiveRecord::Base.connection.execute("UPDATE character_achievement_rankings SET points = c.achievement_points FROM (SELECT id, achievement_points FROM characters WHERE achievement_points > 0) as c WHERE character_achievement_rankings.character_id=c.id AND character_achievement_rankings.points != c.achievement_points")
+
+puts "Finished syncing points in %.2f minutes" % [(Time.now.to_f - start_time) / 60]
+
+# Analyze
+start_time = Time.now.to_f
+ActiveRecord::Base.connection.execute("ANALYZE team_rankings")
+puts "Finished cleaning up in %.2f minutes" % [(Time.now.to_f - start_time) / 60]
+
+FileUtils.safe_unlink(lock_file)

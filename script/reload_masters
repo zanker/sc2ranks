@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "cgi"
+
+f = File.open("./script/names.txt", "r")
+
+f.read.split("\n").each do |line|
+	match = line.match(/(.+): ([a-z]{2})\/([0-9]+)/)
+	if match
+		character = Character.first(:conditions => {:region => match[2], :bnet_id => match[3]})
+		next if character.nil?
+
+		Armory::Queue.character(:region => character.region, :bnet_id => character.bnet_id, :force => true, :priority => 50, :name => character.name)
+	end
+end
+
+f = File.open("./script/flag_names.txt", "r")
+
+f.read.split("\n").each do |line|
+	match = line.match(/([a-z]{2})\/([0-9]+)(.*): ([0-9])/)
+	if match
+		character = Character.first(:conditions => {:region => match[1], :bnet_id => match[2].to_i})
+		next if character.nil?
+
+		Armory::Queue.character(:region => character.region, :bnet_id => character.bnet_id, :force => true, :priority => 50, :name => character.name)
+	end
+end

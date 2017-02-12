@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+f = File.open("./script/flag_names.txt", "r")
+
+f.read.split("\n").each do |line|
+	match = line.match(/([a-z]{2})\/([0-9]+)(.*): ([0-9])/)
+	if match
+		character = Character.first(:conditions => {:region => match[1], :bnet_id => match[2].to_i})
+		unless character
+			puts "#{line} (Cannot find)"
+			next
+		end
+		
+		character.flag = match[4].to_i
+		character.save
+		
+		puts "#{character.region}-#{character.name} (bnet #{character.bnet_id}) = #{character.flag}"
+	end
+end
+
+f.close
+puts "Done"

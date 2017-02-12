@@ -1,0 +1,54 @@
+- @page_title = "Database information"
+- cache("workers", :raw => true, :expires_in => 10.minutes) do
+	.stats
+		- REGIONS_GLOBAL.each do |region|
+			- next unless @regions[region]
+			.spacer
+			.w960
+				%table.shadow{:cellspacing => "1px"}
+					%tr.header
+						%th{:colspan => 8}
+							#{REGION_NAMES[region]}
+							(#{wrap_number(number_with_delimiter(@regions[region] && @regions[region][:total] || 0))} divisions)
+					%tr.columns
+						%th.type Type
+						- LEAGUE_LIST.each do |league|
+							%th.league
+								= make_badge(league, "19x20")
+								%span= LEAGUE_NAMES[league]
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.type Total
+						- LEAGUE_LIST.each do |league|
+							- if @regions[region][league]
+								%td.number= number_with_delimiter(@regions[region][league][:total]) || 0
+							- else
+								%td ---
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.type Total dead
+						- LEAGUE_LIST.each do |league|
+							- if @regions[region][league]
+								%td.number= number_with_delimiter(@regions[region][league][:total_dead]) || 0
+							- else
+								%td ---
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.type Average age
+						- LEAGUE_LIST.each do |league|
+							- if @regions[region][league] && @regions[region][league][:average_age]
+								%td.number= distance_in_words(@regions[region][league][:average_age])
+							- else
+								%td ---
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.type Newest scanned
+						- LEAGUE_LIST.each do |league|
+							- if @regions[region][league] && @regions[region][league][:newest_record]
+								%td.number{:class => "shortjstime #{@regions[region][league][:newest_record].to_i}"}= distance_in_words(Time.now.to_i - @regions[region][league][:newest_record].to_i) 
+							- else
+								%td ---
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.type Oldest scanned
+						- LEAGUE_LIST.each do |league|
+							- if @regions[region][league] && @regions[region][league][:oldest_record]
+								%td.number{:class => "shortjstime #{@regions[region][league][:oldest_record].to_i}"}= distance_in_words(Time.now.to_i - @regions[region][league][:oldest_record].to_i) 
+							- else
+								%td ---
+				

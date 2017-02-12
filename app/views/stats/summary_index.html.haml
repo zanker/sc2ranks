@@ -1,0 +1,160 @@
+- @page_title = "Database statistics"
+- cache(@page_hash, :raw => true, :expires_in => 1.day) do
+	.w960
+		.shadow.divisioninfo
+			Stats for #{@player_group ? "the top #{wrap_number(number_with_delimiter(@player_group))} players in " : ""}#{wrap_number(@bracket ? "#{@bracket}v#{@bracket}" : "all")} #{@is_random ? "random teams" : "teams"} from #{@region ? wrap_number(REGION_NAMES[@region]) : "all regions"}.
+	
+	- unless @bracket
+		.spacer
+		.w960
+			.shadow.divisioninfo
+				Total players: #{wrap_number(number_with_delimiter(@stats[:total]))}
+	
+	.spacer
+	- if @regions[:leagues]
+		.spacer
+		.w960.tblstats
+			%table.shadow{:cellspacing => "1px"}
+				%tr.header
+					%th{:colspan => 8} League distribution by region
+				%tr.columns
+					%th.region Region
+					- LEAGUE_SELECT.each do |league|
+						%th
+							= make_badge(league[1], "17x18")
+							= league[0]
+				%tr{:class => cycle("darkbg", "lightbg")}
+					%td.region Global
+					- LEAGUE_LIST.each do |league|
+						%td= format_stat_number(@regions[:leagues]["global"], league)
+				- RANK_REGIONS_LIST.each do |region|
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.region= REGION_NAMES[region]
+						- LEAGUE_LIST.each do |league|
+							%td= format_stat_number(@regions[:leagues][region], league) || "0%"
+	- if @leagues[:races]
+		.spacer
+		.w960.tblstats
+			%table.shadow{:cellspacing => "1px"}
+				%tr.header
+					%th{:colspan => 6} Race distribution by league
+				%tr.columns
+					%th.region League
+					%th.raceicon #{image_tag "random.png"} Random
+					%th.raceicon #{image_tag "protoss.png"} Protoss
+					%th.raceicon #{image_tag "terran.png"} Terran
+					%th.raceicon #{image_tag "zerg.png"} Zerg
+				- LEAGUE_LIST.each do |league|
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.league
+							#{make_badge(LEAGUES[league], 4, "16x18")}
+							%span= LEAGUE_NAMES[league]
+						- RACE_LIST.each do |race|
+							%td= format_stat_number(@leagues[:races][league], race) || "0%"
+
+	- if @leagues[:race_points]
+		.spacer
+		.w960.tblstats
+			%table.shadow{:cellspacing => "1px"}
+				%tr.header
+					%th{:colspan => 6} Race average points by league
+				%tr.columns
+					%th.region League
+					%th.raceicon #{image_tag "random.png"} Random
+					%th.raceicon #{image_tag "protoss.png"} Protoss
+					%th.raceicon #{image_tag "terran.png"} Terran
+					%th.raceicon #{image_tag "zerg.png"} Zerg
+				- LEAGUE_LIST.each do |league|
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.league
+							#{make_badge(LEAGUES[league], 4, "16x18")}
+							%span= LEAGUE_NAMES[league]
+						- RACE_LIST.each do |race|
+							%td= format_stat_number(@leagues[:race_points][league], race) || 0
+
+	- if @leagues[:race_wins]
+		.spacer
+		.w960.tblstats
+			%table.shadow{:cellspacing => "1px"}
+				%tr.header
+					%th{:colspan => 6} Race average win ratio by league
+				%tr.columns
+					%th.region League
+					%th.raceicon #{image_tag "random.png"} Random
+					%th.raceicon #{image_tag "protoss.png"} Protoss
+					%th.raceicon #{image_tag "terran.png"} Terran
+					%th.raceicon #{image_tag "zerg.png"} Zerg
+				- LEAGUE_LIST.each do |league|
+					- next unless league >= 5
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.league
+							#{make_badge(LEAGUES[league], 4, "16x18")}
+							%span= LEAGUE_NAMES[league]
+						- RACE_LIST.each do |race|
+							%td= format_stat_number(@leagues[:race_wins][league], race) || "0%"
+
+	- if @regions[:races]
+		.spacer
+		.w960.tblstats
+			%table.shadow{:cellspacing => "1px"}
+				%tr.header
+					%th{:colspan => 6} Race distribution by region
+				%tr.columns
+					%th.region Region
+					%th.raceicon #{image_tag "random.png"} Random
+					%th.raceicon #{image_tag "protoss.png"} Protoss
+					%th.raceicon #{image_tag "terran.png"} Terran
+					%th.raceicon #{image_tag "zerg.png"} Zerg
+				%tr{:class => cycle("darkbg", "lightbg")}
+					%td.region Global
+					- RACE_LIST.each do |race|
+						%td= format_stat_number(@regions[:races]["global"], race) || "0%"
+				- RANK_REGIONS_LIST.each do |region|
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.region= REGION_NAMES[region]
+						- RACE_LIST.each do |race|
+							%td= format_stat_number(@regions[:races][region], race) || "0%"
+					
+	- if @regions[:race_points]
+		.spacer
+		.w960.tblstats
+			%table.shadow{:cellspacing => "1px"}
+				%tr.header
+					%th{:colspan => 6} Race average points by region
+				%tr.columns
+					%th.region Region
+					%th.raceicon #{image_tag "random.png"} Random
+					%th.raceicon #{image_tag "protoss.png"} Protoss
+					%th.raceicon #{image_tag "terran.png"} Terran
+					%th.raceicon #{image_tag "zerg.png"} Zerg
+				%tr{:class => cycle("darkbg", "lightbg")}
+					%td.region Global
+					- RACE_LIST.each do |race|
+						%td= format_stat_number(@regions[:race_points]["global"], race) || 0
+				- RANK_REGIONS_LIST.each do |region|
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.region= REGION_NAMES[region]
+						- RACE_LIST.each do |race|
+							%td= format_stat_number(@regions[:race_points][region], race) || 0
+
+	- if @regions[:race_wins]
+		.spacer
+		.w960.tblstats
+			%table.shadow{:cellspacing => "1px"}
+				%tr.header
+					%th{:colspan => 6} Race win ratios by region
+				%tr.columns
+					%th.region Region
+					%th.raceicon #{image_tag "random.png"} Random
+					%th.raceicon #{image_tag "protoss.png"} Protoss
+					%th.raceicon #{image_tag "terran.png"} Terran
+					%th.raceicon #{image_tag "zerg.png"} Zerg
+				%tr{:class => cycle("darkbg", "lightbg")}
+					%td.region Global
+					- RACE_LIST.each do |race|
+						%td= format_stat_number(@regions[:race_wins]["global"], race) || "0%"
+				- RANK_REGIONS_LIST.each do |region|
+					%tr{:class => cycle("darkbg", "lightbg")}
+						%td.region= REGION_NAMES[region]
+						- RACE_LIST.each do |race|
+							%td= format_stat_number(@regions[:race_wins][region], race) || "0%"

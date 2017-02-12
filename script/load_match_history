@@ -1,0 +1,69 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "net/http"
+puts "Loading match history"
+
+has_data = true
+offset = ARGV.first.to_i
+id = 1
+full_run = Time.now.to_f
+keep_retrying = 5
+PER_RUN = 5000
+
+puts "Starting at offset #{offset}"
+while has_data  do
+	has_data = nil
+	
+	puts "Loading #{offset + PER_RUN} characters..."
+	
+	offset_time = Time.now.to_f
+	Character.all(:limit => PER_RUN, :offset => offset, :order => "updated_at ASC").each do |character|
+		time_taken = Time.now.to_f
+		full_url = "http://#{FORCE_REGION[character.region] || character.region}.battle.net/sc2/#{LOCALES[character.region]}/profile/#{character.bnet_id}/#{LOCALE_IDS[character.region]}/#{URI.escape(character.name)}/matches"
+		
+		begin
+			response = open(full_url,
+				"Cookie" => "int-SC2=1",
+				"User-Agent" => "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_4; en-US) AppleWebKit/534.3 (KHTML, like Gecko) Chrome/6.0.464.0 Safari/534.3",
+				"Accept-Encoding" => "gzip,deflate")
+					
+			time_taken = Time.now.to_f - time_taken
+			time_taken = "%.2f" % time_taken		
+		
+			if response.status[0].to_i == 200
+				has_data = true
+
+				content = Armory::Node.inflate_response(response)
+				next if content.blank?
+				
+				doc = Nokogiri::HTML(content)
+				next if doc.nil?
+
+				# Grab data
+				args = {:bnet_id => character.bnet_id, :region => character.region, :name => character.name, :no_cascade => true}
+				Jobs::Profile.parse(args, doc, content)
+				
+				puts "[#{id}] [%.2f] Loaded #{character.region.upcase}-#{character.name}##{character.character_code} bnet #{character.bnet_id} (code #{response.status[0]} #{response.status[1]})" % time_taken
+			end
+		rescue EOFError, OpenURI::HTTPError, Errno::ECONNRESET, Timeout::Error, SocketError, Errno::ECONNREFUSED, Errno::ETIMEDOUT, Errno::EHOSTUNREACH, Errno::ENETUNREACH => e
+			puts e.to_s
+			puts full_url
+		end
+		
+		id += 1
+	end
+
+	puts "Took %.2f seconds to run batch #{offset}" % (Time.now.to_f - offset_time)
+	offset += PER_RUN
+end
+
+puts "Finished! Took %.2f seconds" % (Time.now.to_f - full_run)
+
+
+
+
+

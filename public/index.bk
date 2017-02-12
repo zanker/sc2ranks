@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+  <title>SC2Ranks: Maintenance</title>
+	<style type="text/css">
+		html {
+		  background-color: #2d2e36;
+		  color: #ededed;
+		  font-size: 15px;
+		  font-family: Helvetica, Arial, sans-serif; }
+		a {
+		  text-decoration: none;
+		  outline: none; }
+		  a:link,
+		  a:active,
+		  a:visited {
+			color: #ffd100; }
+		  a:hover {
+			color: #ededed;
+			text-decoration: underline; }
+		.error {
+		  position: relative;
+		  width: 50%;
+		  margin: 0 auto;
+		  top: 40px;
+		  margin-bottom: 25px;
+		  background-color: #24242b;
+		  border: 1px solid #474747; }
+		  .error h1 {
+			margin: 0px;
+			padding: 4px 0px 3px 4px;
+			font-size: 1em;
+			background-color: #430909;
+			text-shadow: #000 1px 1px 1px; }
+		  .error p {
+			margin: 15px 40px 10px 10px; }
+
+		.twitted {
+		  position: relative;
+		  width: 50%;
+		  margin: 0 auto;
+		  background-color: #24242b;
+		  top: 40px;
+		  border: 1px solid #474747;
+		}
+		.twitted h2 {
+		  background-color: #1b1b20;
+		  border-bottom: 1px solid #474747;
+		  margin: 0px;
+		  padding-left: 6px;
+		  color: #ffd100;
+		  text-shadow: #000 1px 1px 1px;
+		  font-size: 1em;
+		  height: 25px;
+		  line-height: 25px;
+		}
+
+		.twitted p.preLoader {
+			margin: 0;
+			padding: 1em 1em 1em 3em;
+		}
+
+		.twitted ul#twitter_update_list {
+			margin: 0;
+			padding: 0;
+			list-style-type: none;
+		}
+
+		.twitted ul#twitter_update_list li {
+			background: url(../images/quote.png) left 10px no-repeat;
+			border-bottom: 1px solid #474747;
+			padding: 10px
+		}
+
+		.twitted ul#twitter_update_list li span {
+			/* tweet content */
+			display: block;
+		}
+
+		.twitted ul#twitter_update_list li span a {
+			/* links in tweet content */
+			color: #22a4e1;
+		}
+
+		.twitted ul#twitter_update_list li a {
+			/* timestamp link */
+			color: #ffd100;
+		}
+
+		.twitted ul#twitter_update_list li.firstTweet {
+		}
+
+		.twitted ul#twitter_update_list li.lastTweet {
+			border-bottom: none;
+		}
+
+		.twitted p.profileLink {
+			display: block;
+			margin: 0;
+			padding: 0.3em 1em;
+			color: #fff;
+			background-color: #15161A;
+		}			
+	</style>
+	</head>
+	<body>
+		<div class="error">
+			<h1>Downtime</h1>
+			<p>Blizzard changed the season format, so going back and fixing bad data due to their change. Also doing some maintenance since it's down anyway. See <a href="http://twitter.com/sc2ranks/">@sc2ranks</a> for info.</p>
+		</div>
+		<div id="twitter"></div>
+	</body>
+</html>

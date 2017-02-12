@@ -1,0 +1,48 @@
+- @page_title = "#{@custom.name} logs"
+- if @custom.bans.count > 0
+	.w960
+		%table.shadow.banlist#sortlist{:cellspacing => "1px"}
+			%tr
+				%th{:colspan => 3} Ban list
+			%tr
+				%th.ip IP
+				%th.date Age
+				%th.unban Revert
+			- @custom.bans.all(:order => "updated_at DESC").each do |ban|
+				%tr{:class => cycle("lightbg", "darkbg")}
+					%td.ip= ban.ip_address
+					%td.date= day_words_or_time(ban.updated_at)
+					%td.unban= link_to "[Revert]", custom_div_unban_path(ban.id)
+	.spacer
+
+- reset_cycle
+
+.w960
+	%table.shadow.loglist#sortlist{:cellspacing => "1px"}
+		%tr
+			%th{:colspan => 5} Logs
+		%tr
+			%th.ip IP
+			%th.date Age
+			%th.name Changes
+			%th.revert Revert
+			%th.ban Ban
+		- @custom.logs.all(:order => "updated_at DESC").each do |log|
+			%tr{:class => cycle("lightbg", "darkbg")}
+				%td.ip= log.ip_address
+				%td.date= day_words_or_time(log.updated_at)
+				%td.name
+					- if log.action_type == LOG_TYPES[:reverted_remove]
+						%span.green Reverted remove, added
+					- elsif log.action_type == LOG_TYPES[:reverted_add]
+						%span.red Revert add, removed
+					- elsif log.action_type == LOG_TYPES[:removed]
+						%span.red Removed
+					- elsif log.action_type == LOG_TYPES[:added]
+						%span.green Added
+					= grab_player_names(log.character_ids)
+				%td.revert= link_to "[Revert]", custom_div_revert_path(log.id), :confirm => "Are you sure you want to revert these changes?"
+				%td.ban= link_to "[Ban]", custom_div_ban_path(log.id), :confirm => "Are you sure you want to ban this IP address?"
+		- if @custom.logs.count == 0
+			%tr{:class => cycle("lightbg", "darkbg")}
+				%th{:colspan => 5} No logs found

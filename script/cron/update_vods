@@ -1,0 +1,105 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "cgi"
+
+puts "Loading vods"
+
+start_time = Time.now.to_f
+
+def load_url(url)
+	return Armory::Node.inflate_response(open(url,
+		"User-Agent" => "SC2Ranks unicorn vod loader",
+		"Accept-Encoding" => "gzip,deflate"))
+end
+
+@name_cache = {}
+def find_character_id(name)
+	return @name_cache[name] unless @name_cache[name].nil?
+	
+	vod = Vod.first(:conditions => ["( player_one = ? AND player_one_id IS NOT NULL ) OR ( player_two = ? AND player_two_id IS NOT NULL )", name, name])
+	return nil unless vod
+	
+	@name_cache[name] = ( vod.player_one == name && vod.player_one_id || vod.player_two == name && vod.player_two_id )
+	return @name_cache[name]
+end
+
+
+# Race IDs: 3 Zerg, 1 Protoss, 2 Terran, maps SC2Casts -> SC2Ranks
+@race_maps = {3 => 0, 1 => 1, 2 => 2}
+def parse_sc2casts(site, data)
+	return if ( data["player1"] == "Multiple Players" and data["player2"] == "Multiple Players" ) or data["player1"] == "Unknown Player" or data["player2"] == "Unknown Player"
+	return if data["player1"].match(" and ") or data["player2"].match(" and ")
+	return if Vod.exists?(:series_id => data["seriesid"].to_i)
+	
+	vod = Vod.new
+	vod.vod_site_id = site.id
+	vod.series_id = data["seriesid"].to_i
+	vod.series_url = data["view_series_url"]
+	vod.event = data["event"]
+	vod.event_url = data["view_event_url"]
+	
+	vod.caster = data["caster"]
+	vod.caster_url = data["view_caster_url"]
+	
+	vod.round = data["round"]
+	
+	match = data["bestof"].match(/([0-9]+) Game/i)
+	if match
+		vod.best_of = match[1].to_i
+		vod.best_of_type = 1
+	elsif data["bestof"].match(/Game ([0-9]+)/i)
+		match = data["bestof"].match(/Game ([0-9]+)/i)
+		vod.best_of = match[1].to_i
+		vod.best_of_type = 0
+	elsif data["bestof"].match(/Best of ([0-9]+)/)
+		match = data["bestof"].match(/Best of ([0-9]+)/)
+		vod.best_of = match[1].to_i
+		vod.best_of_type = 2
+	end
+	
+	unless data["player1"] == "Multiple Players"
+		vod.player_one = data["player1"]
+		vod.player_one_id = find_character_id(data["player1"])
+		vod.player_one_race = @race_maps[data["race1"].to_i]
+	else
+		vod.player_one_id = -1
+	end
+	
+	unless data["player2"] == "Multiple Players"
+		vod.player_two = data["player2"]
+		vod.player_two_id = find_character_id(data["player2"])
+		vod.player_two_race = @race_maps[data["race2"].to_i]
+	else
+		vod.player_two_id = -1
+	end
+	
+	vod.save
+end
+
+# Load replayfu
+sc2casts = VodSite.first(:conditions => {:url => "http://sc2casts.com"})
+
+data = {}
+xml = load_url("http://sc2casts.com/api/list?time=#{sc2casts.updated_at.to_i}")
+xml.split("\n").each do |line|
+	line.strip!
+	if line == "</series>"
+		parse_sc2casts(sc2casts, data)
+	elsif line == "<series>"
+		data = {}
+	elsif line != "<list>" and line != "</list>"
+		match = line.match(/<(.+)>(.+?)<\/(.+)>/)
+		if match
+			data[match[1]] = match[2]
+		end
+	end
+end
+
+sc2casts.touch
+
+puts "Finished in %.2f seconds" % [Time.now.to_f - start_time]
+

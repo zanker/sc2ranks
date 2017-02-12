@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+character_ids = []
+
+Character.all(:conditions => ["name is null AND fav_race = -1"]).each do |character|
+	puts "Killing #{character.id}"
+	character_ids.push(character.id)
+	character.delete
+end
+
+if character_ids.length > 0 && character_ids.length < 10000
+	TeamCharacter.delete_all(["character_id IN (?)", character_ids])
+else
+	puts "Invalid character ids #{character_ids.length}"
+end

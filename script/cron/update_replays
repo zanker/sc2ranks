@@ -1,0 +1,156 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "json/ext"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "cgi"
+
+puts "Loading replays"
+
+start_time = Time.now.to_f
+
+def load_url(url, args={})
+	return Armory::Node.inflate_response(open(url,
+		args.merge({"User-Agent" => "SC2Ranks unicorn replay loader",
+		"Accept-Encoding" => "gzip,deflate"})))
+end
+
+def parse_replays(site, replays)
+	replays.each do |replay_data|
+		bracket = ( replay_data["gameplay_type"] || replay_data["bracket"] ).downcase
+		region = ( replay_data["players"] || replay_data["characters"] )
+		next if region.nil? or region.length == 0
+		region = region.first["region"]
+		next if region.nil?
+		region = region.downcase
+		region = "sea" if region == "sg"
+		next if region.nil?
+		
+		invalid = nil
+		character_list = replay_data["players"] || replay_data["characters"]
+		character_list.each do |player|
+			if player["bnet_id"].to_i == 0 or player["race"].nil? or RACES[player["race"].downcase].nil?
+				invalid = true
+				break
+			end
+		end
+		
+		next if invalid
+		
+		# Create map if necessary
+		map_name = replay_data["map"].gsub("\u0027", "'")
+		map = Map.first(:conditions => ["name = ? AND region = ?", map_name, region])
+		unless map
+			map = Map.create(:name => map_name, :region => region, :total_games => 0, :name_id => MAP_LOCALIZATIONS[map_name] || map_name, :is_blizzard => BLIZZARD_MAPS[map_name])
+		end
+	
+		version = replay_data["version"] || replay_data["build_version"]
+		if version.is_a?(Integer)
+			build_version = version
+		else
+			build_version = version.match(/([0-9]+)$/)[1].to_i
+			game_version = version.match(/\./) ? version.match(/(.+)\.([0-9]+)$/)[1].to_s : nil
+		end
+		match_length = ( replay_data["match_length"] || replay_data["game_time"] ).to_i
+		url = replay_data["url"] || replay_data["site_url"]
+		date = replay_data["upload_date"] || replay_data["played_on"]
+				
+		# Quick player list
+		players = []
+		character_list.each do |player|
+			players.push(player["bnet_id"].to_i)
+		end
+		
+		unless url.match(/^http/)
+			url = "http://#{url}"
+		end
+	
+		# Now make a simple ID we can use to compare
+		hash_id = Digest::SHA1.hexdigest("%s,%s,%s,%s" % [build_version, match_length, map.id, players.sort.to_s])
+		next if Replay.exists?(["hash_id = ? AND site_url != ? AND played_on >= ?", hash_id, url, 1.month.ago.utc])
+		
+		races = []
+		character_list.each do |player|
+			race = player["race"] && RACES[player["race"].downcase]
+			races.push(race) if race
+		end
+		
+		races.uniq!
+			
+		# Insert replay itself now
+		replay = Replay.first(:conditions => ["site_url = ?", url]) || Replay.new
+		replay.bracket = bracket
+		replay.match_length = match_length
+		replay.site_url = url
+		replay.played_on = Time.parse(date).utc
+		replay.game_version = game_version
+		replay.build_version = build_version
+		replay.replay_site_id = site.id
+		replay.map_id = map.id
+		replay.hash_id = hash_id
+		replay.race_comp = races.join("/")
+		replay.save
+	
+		# Insert all relations
+		character_list.each do |player|
+			next unless RACES[player["race"].downcase]
+		
+			character = Character.first(:conditions => {:region => player["region"].downcase, :bnet_id => player["bnet_id"]})
+			unless character
+				character = Character.create(:region => player["region"].downcase, :bnet_id => player["bnet_id"], :name => player["name"], :lower_name => player["name"].downcase, :rank_region => RANK_REGIONS[player["region"].downcase])
+				Armory::Queue.character(:region => player["region"].downcase, :bnert_id => player["bnet_id"], :name => player["name"], :tag => 102)
+			end
+			
+			relation = replay.replay_characters.first(:conditions => {:character_id => character.id}) || ReplayCharacter.new
+			relation.character_id = character.id
+			relation.replay_id = replay.id
+			relation.played_race = RACES[player["race"].to_s.downcase] || -1
+			relation.side_id = player["team"]
+			relation.save
+		end
+	end
+	
+	site.touch
+end
+
+# Load drop.sc
+begin
+	dropsc = ReplaySite.first(:conditions => {:url => "http://drop.sc"})
+	parse_replays(dropsc, JSON.parse(load_url("http://drop.sc/api/sc2ranks?timestamp=#{dropsc.updated_at.iso8601}", "Cookie" => "uuid=7bbbdf10-48c3-419b-a60c-c020945624a1")))
+rescue Exception => e
+	puts "#{e.class}: #{e.message}"
+	puts e.backtrace
+end
+
+# Load replayfu
+begin
+  replayfu = ReplaySite.first(:conditions => {:url => "http://replayfu.com"})
+  parse_replays(replayfu, JSON.parse(load_url("http://replayfu.com/api/replays?key=3b7a53b7e3591250681104efe91c2581&since=#{replayfu.updated_at.to_i}"))[1])
+rescue Exception => e
+        puts "#{e.class}: #{e.message}"
+        puts e.backtrace
+end
+
+# Load GGTracker
+begin
+  gg = ReplaySite.first(:conditions => {:url => "http://ggtracker.com"})
+  parse_replays(gg, JSON.parse(load_url("http://api.ggtracker.com/api/v1/matches?sc2ranks=true&replay_after_dt=#{gg.updated_at.to_i}&limit=99999999999")))
+rescue Exception => e
+	puts "#{e.class}: #{e.message}"
+	puts e.backtrace
+end
+
+
+# # Load TopReplays
+# begin
+#   toprep = ReplaySite.first(:conditions => {:url => "http://topreplays.com"})
+#   parse_replays(toprep, JSON.parse(load_url("http://topreplays.com/Replays/Sc2RanksSync?u=#{toprep.updated_at.to_i}")))
+# rescue Exception => e
+#         puts "#{e.class}: #{e.message}"
+#         puts e.backtrace
+# end
+
+puts "Finished in %.2f seconds" % [Time.now.to_f - start_time]
+

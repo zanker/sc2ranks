@@ -1,0 +1,149 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+puts "Creating stat history"
+
+# For now, we only care about 1v1 and the top 100
+bracket = 1
+is_random = false
+player_group = 100
+
+# Population stats
+Character.count(:group => "region").each do |character|
+        Stats.create(:region => character[0], :stat_number => character[1], :stat_type => STAT_TYPES["population-by-region"])
+end
+
+# GENERIC STATS
+
+# Create league by region stats
+stats = Stats.leagues_by_regions(:bracket => bracket, :is_random => is_random)
+if stats
+        stats.each do |region, data|
+                LEAGUE_LIST.each do |league|
+                        Stats.create(:bracket => bracket, :region => region.to_s, :league => league, :stat_percent => data[:total] > 0 ? data[league].to_f / data[:total] : 0, :stat_number => data[league], :stat_type => STAT_TYPES["leagues-by-regions"])
+                end
+        end
+end
+
+# Now do race by leagues
+stats = Stats.race_by_leagues(:bracket => bracket, :is_random => is_random)
+if stats
+        stats.each do |league, data|
+                RACE_LIST.each do |race|
+                        Stats.create(:bracket => bracket, :league => league, :race => race, :stat_percent => data[:total] > 0 ? data[race].to_f / data[:total] : 0, :stat_number => data[race], :stat_type => STAT_TYPES["races-by-leagues"])
+                end
+        end
+end
+
+# Race win ratios by leagues
+stats = Stats.race_wins_by_leagues(:bracket => bracket, :is_random => is_random)
+if stats
+        stats.each do |league, data|
+                RACE_LIST.each do |race|
+                        Stats.create(:bracket => bracket, :league => league, :race => race, :stat_percent => data[race][:total] > 0 ? data[race][:wins].to_f / data[race][:total] : 0, :stat_number => data[race][:total], :stat_type => STAT_TYPES["racewins-by-leagues"])
+                end
+        end
+end
+
+stats = Stats.race_wins_by_regions(:bracket => bracket, :is_random => is_random)
+if stats
+        stats.each do |region, data|
+                RACE_LIST.each do |race|
+                        Stats.create(:bracket => bracket, :region => region.to_s, :race => race, :stat_percent => data[race][:total] > 0 ? data[race][:wins].to_f / data[race][:total] : 0, :stat_number => data[race][:total], :stat_type => STAT_TYPES["racewins-by-regions"])
+                end
+        end
+end
+
+stats = Stats.race_by_regions(:bracket => bracket, :is_random => is_random)
+if stats
+        stats.each do |region, data|
+                RACE_LIST.each do |race|
+                        Stats.create(:bracket => bracket, :region => region.to_s, :race => race, :stat_percent => data[:total] > 0 ? data[race].to_f / data[:total] : 0, :stat_number => data[race], :stat_type => STAT_TYPES["races-by-regions"])
+                end
+        end
+end
+
+
+stats = Stats.race_points_by_regions(:bracket => bracket, :is_random => is_random)
+if stats
+        stats.each do |region, data|
+                RACE_LIST.each do |race|
+                        Stats.create(:bracket => bracket, :region => region.to_s, :race => race, :stat_number => data[race][:average], :stat_type => STAT_TYPES["racepoints-by-regions"])
+                end
+        end
+end
+
+
+stats = Stats.race_points_by_leagues(:bracket => bracket, :is_random => is_random)
+if stats
+        stats.each do |league, data|
+                RACE_LIST.each do |race|
+                        Stats.create(:bracket => bracket, :league => league, :race => race, :stat_number => data[race][:average], :stat_type => STAT_TYPES["racepoints-by-leagues"])
+                end
+        end
+end
+
+
+# END ALL STATS!
+# Now do race by leagues
+stats = Stats.race_by_leagues(:bracket => bracket, :is_random => is_random, :group => player_group && LEAGUE_LIST, :group_key => "league", :limit => player_group)
+if stats
+        stats.each do |league, data|
+                RACE_LIST.each do |race|
+                        Stats.create(:bracket => bracket, :league => league, :race => race, :stat_percent => data[:total] > 0 ? data[race].to_f / data[:total] : 0, :stat_number => data[race], :stat_type => STAT_TYPES["races-by-leagues"], :player_group => player_group)
+                end
+        end
+end
+
+# Race win ratios by leagues
+stats = Stats.race_wins_by_leagues(:bracket => bracket, :is_random => is_random, :group => player_group && LEAGUE_LIST, :group_key => "league", :limit => player_group)
+if stats
+        stats.each do |league, data|
+                RACE_LIST.each do |race|
+                        Stats.create(:bracket => bracket, :league => league, :race => race, :stat_percent => data[race][:total] > 0 ? data[race][:wins].to_f / data[race][:total] : 0, :stat_number => data[race][:total], :stat_type => STAT_TYPES["racewins-by-leagues"], :player_group => player_group)
+                end
+        end
+end
+
+# Race points by leagues
+stats = Stats.race_points_by_leagues(:bracket => bracket, :is_random => is_random, :group => player_group && LEAGUE_LIST, :group_key => "league", :limit => player_group)
+if stats
+        stats.each do |league, data|
+                RACE_LIST.each do |race|
+                        Stats.create(:bracket => bracket, :league => league, :race => race, :stat_number => data[race][:average], :stat_type => STAT_TYPES["racepoints-by-leagues"], :player_group => player_group)
+                end
+        end
+end
+
+# Race wins by regions
+stats = Stats.race_wins_by_regions(:bracket => bracket, :is_random => is_random, :group => player_group && REGIONS, :group_key => "region", :limit => player_group)
+if stats
+        stats.each do |region, data|
+                RACE_LIST.each do |race|
+                        Stats.create(:bracket => bracket, :region => region.to_s, :race => race, :stat_percent => data[race][:total] > 0 ? data[race][:wins].to_f / data[race][:total] : 0, :stat_number => data[race][:total], :stat_type => STAT_TYPES["racewins-by-regions"], :player_group => player_group)
+                end
+        end
+end
+
+# Race population by regions
+stats = Stats.race_by_regions(:bracket => bracket, :is_random => is_random, :group => player_group && REGIONS, :group_key => "region", :limit => player_group)
+if stats
+        stats.each do |region, data|
+                RACE_LIST.each do |race|
+                        Stats.create(:bracket => bracket, :region => region.to_s, :race => race, :stat_percent => data[:total] > 0 ? data[race].to_f / data[:total] : 0, :stat_number => data[race], :stat_type => STAT_TYPES["races-by-regions"], :player_group => player_group)
+                end
+        end
+end
+
+
+# Region points by region
+stats = Stats.race_points_by_regions(:bracket => bracket, :is_random => is_random, :group => player_group && REGIONS, :group_key => "region", :limit => player_group)
+if stats
+        stats.each do |region, data|
+                RACE_LIST.each do |race|
+                        Stats.create(:bracket => bracket, :region => region.to_s, :race => race, :stat_number => data[race][:average], :stat_type => STAT_TYPES["racepoints-by-regions"], :player_group => player_group)
+                end
+        end
+end

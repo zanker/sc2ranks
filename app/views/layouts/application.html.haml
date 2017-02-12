@@ -1,0 +1,317 @@
+!!!
+%html
+	%head
+		- if @page_title
+			%title= "#{@page_title} - SC2Ranks"
+		- else
+			%title Starcraft 2 Rankings
+		= stylesheet_link_tag("global", :cache => "cache-all", :lifetime => 1.month)
+		= javascript_include_tag("jquery.min14", "jquery.cookie", "global", :cache => "cache-all", :lifetime => 1.month)
+		= javascript_include_tag("https://apis.google.com/js/plusone.js")
+		%link{:rel => "shortcut icon", :href => "/favicon.png"}
+		%link{:rel => "apple-touch-icon-precomposed", :href => "/apple-icon.png"}
+		- if @page_rss
+			= @page_rss
+		- if @page_atom
+			= @page_atom
+		- if RAILS_ENV == "production"
+			:javascript
+				var _gaq = _gaq || [];
+				_gaq.push(['_setAccount', 'UA-1459431-43']);
+				_gaq.push(['_setDomainName', '.sc2ranks.com']);
+				_gaq.push(['_trackPageview']);
+				_gaq.push(['b._setAccount', 'UA-1459431-63']);
+				_gaq.push(['b._setDomainName', '.sc2ranks.com']);
+				_gaq.push(['b._trackPageview']);
+				_gaq.push(['c._setAccount', 'UA-1459431-57']);
+				_gaq.push(['c._setDomainName', '.sc2ranks.com']);
+				_gaq.push(['c._trackPageview']);
+
+				(function() {
+					var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+					ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+					var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+				})();
+				
+				
+				mbCustomDomainName="mb.zam.com";
+			= javascript_include_tag("//d3pkae9owd2lcf.cloudfront.net/mb102.js.gz")
+			:javascript
+				#{request.request_uri == "/" ? "mbAddAttr('mb_pc', 'SC2Ranks Homepage')" : "mbAddAttr('mb_pc', 'SC2Ranks Other')"};
+				mbAddAttr('mb_ri', '120');
+
+ 
+	.w1140noindex
+		.shadow.menu
+			%ul
+				-#= build_bookmarks(cookies[:bm])
+				%li.nodropdown
+					.goldlink= can_link_to_unless("Home", root_path)
+				%li.dropdown
+					.text Achievements
+					.arrow.down
+					%ul.invisible
+						%li{:class => cycle("darkbg", "lightbg")}= can_link_to_unless("Global", achievement_list_path("all"))
+						- RANK_REGIONS_LIST.each do |region|
+							.rowsep
+							%li{:class => cycle("darkbg", "lightbg")}= can_link_to_unless(REGION_NAMES[region], achievement_list_path(region))
+				%li.dropdown
+					.text Maps
+					.arrow.down
+					%ul.invisible
+						%li{:class => cycle("darkbg", "lightbg")}= can_link_to_unless("Global", map_list_path("all"))
+						- RANK_REGIONS_LIST.each do |region|
+							.rowsep
+							%li{:class => cycle("darkbg", "lightbg")}= can_link_to_unless(REGION_NAMES[region], map_list_path(region))
+				%li.dropdown
+					.text Custom divisions
+					.arrow.down
+					%ul.invisible
+						%li.darkbg= can_link_to_unless("Create your own", custom_division_create_path)
+						.rowsep
+						%li.lightbg= can_link_to_unless("Division list", custom_division_list_path)
+				%li.nodropdown
+					.goldlink= can_link_to_unless("GM History", gm_log_path)
+				%li.dropdown
+					.text Misc
+					.arrow.down
+					%ul.invisible
+						%li.darkbg= can_link_to_unless("Top 10 graph", rank_graph_path)
+						.rowsep
+						%li.darkbg= link_to("Email", "mailto:shadow@sc2ranks.com")
+						.rowsep
+						%li.lightbg= link_to("@Twitter", "http://twitter.com/sc2ranks")
+						.rowsep
+						%li.darkbg= can_link_to_unless("API", api_path)
+						.rowsep
+						%li.lightbg= can_link_to_unless("FAQ", faq_path)
+						.rowsep
+						%li.darkbg= can_link_to_unless("Status", workers_path)
+			.search
+				- form_tag(search_friend_path, :method => :post, :class => "csearch-form") do
+					= select(:search, :region, REGION_SELECT_SHORT, :selected => cookies[:code_region] || "us")
+					= text_field_tag("search[name]", "", :class => "csearch-name")
+					%label #
+					= text_field_tag("search[code]", "", :class => "csearch-code")
+	:javascript
+		load_default_search()
+	- unless @custom
+		.w1140
+			.tabs
+				%span.tab#rankings{:class => is_active?("rankings") && "selected"}
+					%span.text Ranking
+				%span.tab#replays{:class => is_active?("replay_search") && "selected"}
+					%span.text Replays
+				%span.tab#divisions{:class => is_active?("divisions") && "selected"}
+					%span.text Divisions
+				%span.tab#stats{:class => is_active?("stats") && "selected"}
+					%span.text Stats
+				%span.tab#character{:class => flash[:tab_type] && flash[:tab_type] != "profile_search" && flash[:tab_type] != "character_search" && flash[:tab_type] != "replay_search" && "selected"}
+					%span.text Battle.net URL
+				%span.tab#search{:class => is_active?("character_search") && "selected"}
+					%span.text Search
+				%span.tab#psearch{:class => is_active?("profile_search") && "selected"}
+					%span.text Profile Finder
+			.shadow.pages
+				#f-rankings.container{:class => !is_active?("rankings") && "invisible"}
+					- form_tag(rank_setup_path, :method => :post) do
+						= select(:filter, :region, REGION_SELECT_ALL, :selected => params[:region]  || flash[:force_region] || @region || "all")
+						%label Expansion
+						= select(:filter, :expansion, SHORT_EXPANSIONS.map {|k, v| [v, k]}, :selected => params.has_key?(:expansion) ? params[:expansion].to_i : (@expansion || CURRENT_EXPANSION))
+						%label League
+						= select(:filter, :league, LEAGUE_SELECT_ALL, :selected => params[:league] || "grandmaster")
+						%label Bracket
+						= select(:filter, :bracket, grouped_options_for_select([["Team", [["1v1", "1"], ["2v2", "2"], ["3v3", "3"], ["4v4", "4"]]], ["Random", [["R 2v2", "2R"], ["R 3v3", "3R"], ["R 4v4", "4R"]]]], :selected => params[:bracket] || "1"))
+						%label Race
+						= select(:filter, :race, [["All", "all"], ["Protoss", "protoss"], ["Zerg", "zerg"], ["Terran", "terran"], ["Random", "random"]], :selected => params[:race] || "all")
+						%label Sort
+						= select(:filter, :sort, [["Points", "points"], ["Win ratio", "ratio"], ["Points * Ratio", "pointratio"], ["Points - Bonus", "pointpool"], ["Race comp", "comp"], ["Total games", "played"], ["Wins", "wins"], ["Losses", "losses"]], :selected => params[:sort] || "points")
+						%label Activity
+						= select(:filter, :activity, [["All", "0"], ["<=7 days", "7"], ["<=14 days", "14"], ["<=30 days", "30"], ["<=3 months", "90"], ["<=6 months", "180"]], :selected => params[:activity] || "all")
+						= submit_tag("View")
+				#f-replays.container{:class => !is_active?("replay_search") && "invisible"}
+					- form_tag(replay_search_format_path, :method => :post) do
+						= select(:filter, :region, REGION_SELECT_ALL, :selected => params[:region]  || flash[:force_region] || @region || "all")
+						%label League
+						= select(:filter, :league, LEAGUE_SELECT_ALL, :selected => params[:league] || "grandmaster")
+						%label Bracket
+						= select(:filter, :bracket, grouped_options_for_select([["Team", [["1v1", "1"], ["2v2", "2"], ["3v3", "3"], ["4v4", "4"]]], ["Random", [["R 2v2", "2R"], ["R 3v3", "3R"], ["R 4v4", "4R"]]]], :selected => params[:bracket] || "1"))
+						%label Patch
+						= select(:filter, :patch, PATCH_SELECT, :selected => ( params[:patch].to_i > 0 ? params[:patch].to_i : "all" ) )
+						%label Has race
+						= select(:filter, :race, [["Any", "any"], ["Protoss", "protoss"], ["Zerg", "zerg"], ["Terran", "terran"]], :selected => params[:race] || "all")
+						= submit_tag("Search")
+				
+				#f-divisions.container{:class => !is_active?("divisions") && "invisible"}
+					- form_tag(rank_divisions_setup_path, :method => :post) do
+						= select(:filter, :region, REGION_SELECT_ALL, :selected => params[:region] || flash[:force_region] || "all")
+						%label Expansion
+						= select(:filter, :expansion, SHORT_EXPANSIONS.map {|k, v| [v, k]}, :selected => params.has_key?(:expansion) ? params[:expansion].to_i : (@expansion || CURRENT_EXPANSION))
+						%label League
+						= select(:filter, :league, LEAGUE_SELECT, :selected => params[:league] || "grandmaster")
+						%label Bracket
+						= select(:filter, :bracket, grouped_options_for_select([["Team", [["1v1", "1"], ["2v2", "2"], ["3v3", "3"], ["4v4", "4"]]], ["Random", [["R 2v2", "2R"], ["R 3v3", "3R"], ["R 4v4", "4R"]]]], :selected => params[:bracket] || "1"))
+						%label Sort by
+						= select(:filter, :sort, [["Points", "points"], ["Win ratio", "ratio"], ["Points + Ratio", "pointratio"], ["Average games", "games"], ["Total players", "players"]], :selected => params[:sort] || "points")
+						= submit_tag("View")
+				#f-stats.container{:class => !is_active?("stats") && "invisible"}
+					- form_tag(stats_parse_path, :method => :post) do
+						%label
+						= select(:statfilter, :type, [["League", "league"], ["Region", "region"], ["Race", "race"], ["Names", "name"], ["Achievements", "achievements"]], :selected => params[:action] || "league")
+						= select(:statfilter, :region, REGION_SELECT_ALL, :selected => params[:region]  || flash[:force_region] || "all")
+						= select(:statfilter, :expansion, SHORT_EXPANSIONS.map {|k, v| [v, k]}, :selected => params.has_key?(:expansion) ? params[:expansion].to_i : (@expansion || CURRENT_EXPANSION))
+						%label.statleague League
+						= select(:statfilter, :league, LEAGUE_SELECT_ALL, :selected => params[:league]  || "all")
+						%label Bracket
+						= select(:statfilter, :bracket, grouped_options_for_select([["All", [["All", "all"]]], ["Team", [["1v1", "1"], ["2v2", "2"], ["3v3", "3"], ["4v4", "4"]]], ["Random", [["R 2v2", "2R"], ["R 3v3", "3R"], ["R 4v4", "4R"]]]], :selected => params[:bracket] || "1"))
+						%label.statgroup Group
+						= select(:statfilter, :group, [["All", "all"], ["Top 100", "100"], ["Top 250", "250"], ["Top 500", "500"], ["Top 1000", "1000"], ["Top 2500", "2500"], ["Top 5000", "5000"]], :selected => params[:group] || "all")
+						%label.statactivity Activity
+						= select(:statfilter, :activity, [["All", "0"], ["<=7 days", "7"], ["<=14 days", "14"], ["<=30 days", "30"], ["<=3 months", "90"], ["<=6 months", "180"]], :selected => params[:activity] || "all")
+						= submit_tag("View")
+				
+				#f-character.container{:class => flash[:tab_type] && flash[:tab_type] != "profile_search" && flash[:tab_type] != "character_search" ? "" : "invisible"}
+					- form_tag(character_reformat_path, :method => :post) do
+						%label Battle.net profile URL
+						= text_field_tag("character[url]", flash[:bad_url] || params[:character] && params[:character][:url])
+						= submit_tag("View")
+				#f-search.container{:class => !is_active?("character_search") && "invisible"}
+					- form_tag(search_path, :method => :post) do
+						= select(:search, :region, REGION_SELECT_ALL, :selected => params[:region] || params[:search] && params[:search][:region] || cookies[:search_region] || flash[:force_region] || "all")
+						%label
+							Name
+						= text_field_tag("search[name]", params[:controller] == "character_search" && params[:name] || "")
+						%label Type
+						= select(:search, :type, [["Contains", "contains"], ["Starts with", "starts"], ["Ends with", "ends"], ["Is exactly", "exact"]], :selected => params[:type] || "starts")
+						= submit_tag("Search")
+				#f-psearch.container{:class => !is_active?("profile_search") && "invisible"}
+					- form_tag(profile_reformat_path, :method => :post) do
+						= select(:psearch, :region, REGION_SELECT_SHORT, :selected => params[:region] || params[:search] && params[:search][:region] || cookies[:search_region] || flash[:force_region] || "us")
+						%label Exact name
+						= text_field_tag("psearch[name]", params[:controller] == "profile_search" && params[:name] || "")
+						%label Search type
+						= select(:psearch, :type, [["1v1 team", "1t"], ["2v2 team", "2t"], ["3v3 team", "3t"], ["4v4 team", "4t"], ["Achievements", "achieve"]], :selected => params[:type] || "1t")
+						%label Sub-type
+						= select(:psearch, :sub_type, [["Points", "points"], ["Wins", "wins"], ["Losses", "losses"], ["Division name", "division"]], :selected => params[:sub_type] || "points")
+						= text_field_tag("psearch[value]", params[:controller] == "profile_search" && params[:value] || "")
+						= submit_tag("Find")
+	- else
+		.w1140
+			.shadow.pages
+				.container
+					- form_tag(custom_division_format_path, :method => :post) do
+						= hidden_field_tag "filter[id]", params[:id].to_i
+						%label Region
+						= select(:filter, :region, REGION_SELECT_ALL, :selected => params[:region]  || flash[:force_region] || @region || "all")
+						%label Expansion
+						= select(:filter, :expansion, SHORT_EXPANSIONS.map {|k, v| [v, k]}, :selected => params.has_key?(:expansion) ? params[:expansion].to_i : (@expansion || CURRENT_EXPANSION))						
+						%label League
+						= select(:filter, :league, LEAGUE_SELECT_ALL, :selected => params[:league] || "all")
+						%label Bracket
+						= select(:filter, :bracket, grouped_options_for_select([["Team", [["1v1", "1"], ["2v2", "2"], ["3v3", "3"], ["4v4", "4"]]], ["Random", [["R 2v2", "2R"], ["R 3v3", "3R"], ["R 4v4", "4R"]]]], :selected => params[:bracket] || "1"))
+						%label Race
+						= select(:filter, :race, [["All", "all"], ["Protoss", "protoss"], ["Zerg", "zerg"], ["Terran", "terran"], ["Random", "random"]], :selected => params[:race] || "all")
+						%label Sort by
+						= select(:filter, :sort, [["Points", "points"], ["Win ratio", "ratio"], ["Points * Ratio", "pointratio"], ["Race comp", "comp"], ["Total games", "played"], ["Wins", "wins"], ["Losses", "losses"]], :selected => params[:sort] || "points")
+						= submit_tag "View"
+	- if RAILS_ENV == "production"
+		.smallspacer
+		.w1140.ad.adbannerbg
+			:javascript
+				window["a" + mbCampaignVals.r]({sz:5,w:728,h:90,s:1678,t:5,r:mbCampaignVals.r});
+		.spacer
+	- else
+		.spacer
+	- if !flash[:error].blank?
+		.w960.shadow.error
+			%h1 Error
+			%p= flash[:error]
+	- if !flash[:message].blank?
+		.w960.shadow.message
+			%h1 Message
+			%p= flash[:message]
+	- if RAILS_ENV != "production" or (params[:controller] == "team" && params[:action] == "index")
+		= yield
+	- else
+		.w1140.contentfull
+			.contentleft
+				= yield
+			.contentright
+				:javascript
+					window["a" + mbCampaignVals.r]({sz:3,w:160,h:600,s:1678,t:5,r:mbCampaignVals.r});
+	
+	.spacer
+	.w1140.copyright
+		:plain
+				<div id="footer">
+				<div id="footer-logo">
+				<a href="http://www.zam.com" class="logo"></a>
+				<div class="copyright">&copy; 2012 ZAM Network LLC</div>
+				</div>
+				<div id="footer-network">
+				<div><h3>ZAM Network</h3><ul>
+				<li class="first"><a href="http://www.zam.com/" target="_blank">ZAM.com</a></li>
+				<li><a href="http://www.wowhead.com/" target="_blank">Wowhead</a></li>
+				<li><a href="http://www.torhead.com/" target="_blank">Torhead</a></li>
+				<li><a href="http://rifthead.com" target="_blank">Rifthead</a></li>
+				<li><a href="http://thottbot.com/" target="_blank">Thottbot</a></li>
+				<li><a href="http://d3db.com/" target="_blank" title="Diablo 3 Database">D3DB</a></li>
+				<li><a href="http://www.tankspot.com/" target="_blank">TankSpot</a></li>
+				<li><a href="http://www.sc2ranks.com/" target="_blank">SC2 Ranks</a></li>
+				<li><a href="http://www.vindictusdb.com/" target="_blank">VindictusDB</a></li>
+				<li><a href="http://www.torchlightarmory.com/" target="_blank">Torchlight Armory</a></li>
+				<li><a href="http://www.rharmory.com/" target="_blank">Rusty Hearts Armory</a></li>
+				<li class="last"><a href="http://www.dnarmory.com/" target="_blank">Dragon Nest Armory</a></li>
+				</ul></div>
+				<div><h3>Game Sites</h3><ul>
+				<li class="first"><a href="http://www.wowhead.com/" target="_blank">World of Warcraft</a></li>
+				<li><a href="http://www.torhead.com/" target="_blank">Star Wars: The Old Republic</a></li>
+				<li><a href="http://rift.zam.com/" target="_blank">Rift</a></li>
+				<li><a href="http://ffxi.allakhazam.com/" target="_blank">Final Fantasy XI</a></li>
+				<li><a href="http://ffxiv.zam.com/" target="_blank">Final Fantasy XIV</a></li>
+				<li><a href="http://everquest.allakhazam.com/" target="_blank">EverQuest</a></li>
+				<li><a href="http://eq2.zam.com/" target="_blank">EverQuest 2</a></li>
+				<li><a href="http://www.vindictusdb.com/" target="_blank">Vindictus</a></li>
+				<li><a href="http://www.torchlightarmory.com/" target="_blank">Torchlight</a></li>
+				<li class="last"><a href="http://www.sc2ranks.com/" target="_blank">Starcraft 2</a></li>
+				</ul></div>
+				<div><h3>Addon Sites</h3><ul>
+				<li class="first"><a href="http://www.mmoui.com/" target="_blank">MMOUI</a></li>
+				<li><a href="http://www.wowinterface.com/" target="_blank">World of Warcraft</a></li>
+				<li><a href="http://www.riftui.com/" target="_blank">Rift</a></li>
+				<li><a href="http://www.swtorui.com/" target="_blank">Star Wars: The Old Republic</a></li>
+				<li><a href="http://www.eqinterface.com/" target="_blank">EverQuest</a></li>
+				<li><a href="http://www.eq2interface.com/" target="_blank">EverQuest II</a></li>
+				<li><a href="http://www.lotrointerface.com/" target="_blank">Lord of the Rings Online</a></li>
+				<li class="last"><a href="http://www.vginterface.com/" target="_blank">Vanguard</a></li>
+				</ul></div>
+				<div><h3>Community</h3><ul>
+				<li class="first"><a href="http://www.zam.com/forum.html" target="_blank">ZAM Forums</a></li>
+				<li><a href="http://www.wowhead.com/forums" target="_blank">Wowhead Forums</a></li>
+				<li><a href="http://www.zam.com/news.html" target="_blank">ZAM News</a></li>
+				<li><a href="http://www.wowheadnews.com/" target="_blank">WowheadNews.com</a></li>
+				<li><a href="http://www.facebook.com/ZAMofficial" target="_blank">Facebook</a></li>
+				<li><a href="http://twitter.com/ZAMofficial" target="_blank">Twitter</a></li>
+				<li class="last"><a href="http://www.youtube.com/ZAMOfficial" target="_blank">YouTube</a></li>
+				</ul></div>
+				<div><h3>ZAM General</h3><ul>
+				<li class="first"><a href="http://www.zam.com/premium.html">Premium</a></li>
+				<li><a href="http://www.zam.com/advertising">Advertise</a></li>
+				<li><a href="http://www.zam.com/privacy.html">Privacy Policy</a></li>
+				<li><a href="http://www.zam.com/terms.html">Terms of Service</a></li>
+				</ul></div>
+				</div>
+				<div class="clear"></div>
+				</div>
+	:javascript
+		window["a" + mbCampaignVals.r]({sz:25,w:1,h:1,s:1678,t:5,rm:true,r:mbCampaignVals.r});
+
+	
+	- if RAILS_ENV == "production"
+		= javascript_include_tag("http://edge.quantserve.com/quant.js")
+		:javascript
+			_qacct = "p-80xBzMhbKolFI";quantserve();
+		%noscript
+			%img{:src => "http://pixel.quantserve.com/pixel/p-80xBzMhbKolFI.gif", :style => "display: none;", :border => "0", :height => "1", :width => "1", :alt => "Quantcast"}
+			
+			

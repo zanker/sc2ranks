@@ -1,0 +1,13 @@
+!!! XML 
+%atom{:xmlns => "http://www.w3.org/2005/Atom"}
+	%title Last 25 replays for #{@character.region.upcase}-#{@character.name}
+	%link{:rel => "self", :href => character_replay_url(@character.region, @character.bnet_id, @character.name)}
+	%updated= @character.updated_at
+	
+	- @replays.each do |replay|
+		%entry
+			%title= feed_replay_name(replay)
+			%summary= feed_replay_players(replay)
+			%link{:href => replay.site_url}
+			%id= "tag:sc2ranks.com,match,replays,#{replay.id}"
+			%updated= replay.played_on

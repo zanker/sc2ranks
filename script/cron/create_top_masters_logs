@@ -1,0 +1,48 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "cgi"
+require "#{RAILS_ROOT}/script/current_season.rb";
+TOP_LIMIT = 100
+puts "Creating logs for the top #{TOP_LIMIT} players"
+
+start_time = Time.now.to_f
+
+history = TeamHistory.first(:select => "id", :order => "id DESC", :limit => 1)
+start_id = (history && history.id || 0) + 1
+
+team_ids = []
+
+Team.all(:conditions => {:league => LEAGUES["master"], :bracket => 1, :season => current_season, :is_random => false}, :order => "points DESC", :limit => TOP_LIMIT).each do |team|
+	# Figure out what we had last for them, if nothing changed then don't add a new record
+	history = TeamHistory.first(:conditions => {:team_id => team.id}, :order => "id DESC", :limit => 1)
+	if history.nil? || history.points != team.points || history.league != team.league || history.world_rank != team.world_rank
+		TeamHistory.create(:team_id => team.id, :points => team.points, :league => team.league, :world_rank => team.world_rank)
+	end
+	
+		#if history.nil?
+			#puts "New record #{team.first_character.region.upcase}-#{team.first_character.name}"
+		#else
+			#puts "Changed #{team.first_character.region.upcase}-#{team.first_character.name}, #{team.points - history.points} points, world rank #{team.world_rank - (history.world_rank || 0)}, league #{team.league == history.league ? "same" : "changed #{LEAGUES[team.league]} -> #{LEAGUES[history.league]}"}"
+		#end
+	#else
+	#	puts "No change #{team.first_character.region.upcase}-#{team.first_character.name}"
+	#end
+end
+
+history = TeamHistory.first(:select => "id", :order => "id DESC", :limit => 1)
+end_id = history && history.id || 1
+
+if end_id > start_id
+	TeamHistoryPeriod.create(:starts_at => start_id, :ends_at => end_id)
+end
+
+if team_ids.length > 0
+	Team.update_all(["updated_at = ?", Time.now.utc], ["id IN (?)", team_ids])
+end
+
+puts "Finished in %.2f seconds" % [Time.now.to_f - start_time]
+

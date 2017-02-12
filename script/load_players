@@ -1,0 +1,38 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+#us;336938;SamirDuran;2255
+division_ids = {}
+
+file = open("#{RAILS_ROOT}/script/player_list.txt", "r")
+file.each { |line|
+	data = line.split(";")
+	
+	division_ids[data[0]] ||= {}
+	division_ids[data[0]][data[3].to_i] = { :name => data[2], :bnet_id => data[1].to_i }
+}
+
+Division.all.each do |division|
+	next if division_ids[division.region].nil?
+	division_ids[division.region].delete(division.bnet_id)	
+end
+
+puts "Queuing divisions"
+summary = {}
+division_ids.each do |region, list|
+	summary[region] = list.length
+	list.each do |division_id, character|
+		puts "Queued division #{division_id}"
+		Armory::Queue.character(:name => character[:name], :bnet_id => character[:bnet_id], :region => region, :is_auto => true, :tag => 11)
+	end
+end
+
+puts summary.to_json
+puts "Done!"
+
+
+
+

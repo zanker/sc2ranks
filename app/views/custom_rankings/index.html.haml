@@ -1,0 +1,42 @@
+- @page_title = "#{@custom["name"]} #{@is_random ? "R " : ""}#{@bracket}v#{@bracket} rankings#{@offset > 0 ? " (page #{(@offset / 100).ceil + 1})" : ""}"
+- cache(@page_hash, :raw => true, :expires_in => 2.hours) do
+	.w960
+		.shadow.divisionmsg
+			- unless @custom.message.blank?
+				= @custom.message
+			- else
+				Viewing custom rankings, you can see full rankings at #{link_to "SC2 Ranks", "http://sc2ranks.com"}.
+	.spacer
+	.w960
+		= build_pagination(PAGINATION[:default], @total_teams, "paginate-top")
+		.clearb
+		.paginate-top.paginate-custom
+			%a{:href => "http://twitter.com/share?url=#{CGI.escape(request.url)}&via=sc2ranks", "data-count" => "none", :target => "_blank", :onclick => "javascript:social_popup(this, 'Share this on Twitter', 450, 600); return false;", :class => "social"}
+				= image_tag("twitter.png")
+				Tweet
+			&bull;
+			%a{:href => "http://www.facebook.com/sharer.php?u=#{CGI.escape(request.url)}", :target => "_blank", :onclick => "javascript:social_popup(this, 'Facebook', 450, 600); return false;", :class => "social"}
+				= image_tag("facebook.png")
+				Share
+			&bull;
+			= link_to "Manage characters", custom_division_characters_path(@custom["id"])
+			&bull;
+			= link_to "Logs", custom_div_logs_path(@custom["id"])
+			&bull;
+			= link_to "Admin", custom_division_manage_path(@custom["id"])
+		.clearb
+		%table.shadow.rankings#sortlist{:cellspacing => "1px"}
+			%tr
+				= build_columns(:league => @league || "all", :region => (@custom.show_regions && @region || nil), :character_code => @custom.show_codes, :bracket => @bracket, :is_random => @is_random)
+			- if @total_teams == 0
+				%tr.darkbg
+					%td{:colspan => 9} Cannot find any players.
+			- else
+				= build_rows(@rankings, :league => @league || "all", :region => (@custom.show_regions && @region || nil), :character_code => @custom.show_codes, :bracket => @bracket, :offset => @offset, :is_random => @is_random)
+
+		= build_pagination(PAGINATION[:default], @total_teams, "paginate-bottom")
+		= javascript_include_tag("sorttable", :cache => "cache-sorttable", :lifetime => 1.month)
+		:javascript
+			var bracket = #{@bracket}
+			setup_table()
+	.clearb

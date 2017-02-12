@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+while( true ) do
+	Character.all(:limit => 500, :conditions => {:lower_name => nil}).each do |character|
+		character.lower_name = character.name.downcase
+		character.save
+		
+		puts "[#{character.id}] #{character.lower_name} #{character.name}"
+	end
+
+	puts "500 processed"
+end

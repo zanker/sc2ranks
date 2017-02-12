@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+lock_file = "#{RAILS_ROOT}/tmp/cache-achievements.lock"
+# Lock the script
+if FileTest.exists?(lock_file)
+	puts "Already recaching, returned"
+	return
+end
+
+FileUtils.touch(lock_file)
+
+
+start_time = Time.now.to_f
+
+# Start working!
+Achievement.all(:conditions => ["is_parent = ? AND category_id IN (?)", false, ACHIEVEMENT_CATEGORIES.keys]).each do |achievement|
+	ActiveRecord::Base.connection.execute("UPDATE character_achievements SET cached_world_rank = ca.rank FROM (SELECT id, rank() OVER (ORDER BY earned_on ASC) as rank FROM character_achievements WHERE achievement_id=#{achievement.achievement_id}) as ca WHERE character_achievements.id=ca.id")
+end
+
+# figure out total
+ActiveRecord::Base.connection.execute("UPDATE achievements SET world_earned_by = ca.total FROM (SELECT achievement_id, COUNT(*) as total FROM character_achievements GROUP BY achievement_id) as ca WHERE achievements.achievement_id=ca.achievement_id")
+
+puts "Finished in %.2f minutes" % [(Time.now.to_f - start_time) / 60]
+
+start_time = Time.now.to_f
+
+ActiveRecord::Base.connection.execute("ANALYZE character_achievements")
+ActiveRecord::Base.connection.execute("ANALYZE achievements")
+
+puts "Finished cleaning up in %.2f minutes" % [(Time.now.to_f - start_time) / 60]
+
+FileUtils.safe_unlink(lock_file)

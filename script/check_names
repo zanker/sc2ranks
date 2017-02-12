@@ -1,0 +1,68 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+@f = File.open("/tmp/names.txt", "w+")
+
+names = {}
+Vod.all(:conditions => ["player_one_id IS NULL or player_two_id IS NULL"]).each do |vod|
+	names[vod.player_one] = (names[vod.player_one] || 0) + 1 if vod.player_one_id.nil?
+	names[vod.player_two] = (names[vod.player_two] || 0) + 1 if vod.player_two_id.nil?
+end
+
+@written = 0
+def write_line(line)
+	puts line
+	@f.write("#{line}\r\n")
+	@written += 1
+
+	if @written >= 20
+		@f.flush
+		@written = 0
+	end
+end
+
+parsed_names = []
+names.each do |name, found|
+	parsed_names.push([name, found])
+end
+
+# Prioritize names that are found more often, as it's more likely to be a real 'pro'
+parsed_names.sort! {|a, b| b[1] <=> a[1] }
+
+parsed_names.each do |name|
+	name = name[0]
+	next if name.nil?
+
+	profiles = []
+	Character.all(:conditions => ["LOWER(name) = ?", name.downcase], :limit => 7).each do |char|
+		profiles.push("#{char.region}/#{char.bnet_id}/#{char.name}")
+	end
+
+	if profiles.length == 0
+		Character.all(:conditions => ["name ILIKE ? OR name ILIKE ?", "%#{name}", "#{name}%"], :limit => 7).each do |char|
+			profiles.push("#{char.region}/#{char.bnet_id}/#{char.name}")
+		end
+
+		if profiles.length == 0
+			write_line "#{name}: No profile"
+		elsif profiles.length == 1
+			write_line "#{name}: Inexact match to find, #{profiles.first}"
+		elsif profiles.length > 6
+			write_line "#{name}: Found over 6 profiles"
+		else
+			write_line "#{name}: #{profiles.join(", ")}"
+		end
+	elsif profiles.length == 1
+		write_line "#{name}: Found one, #{profiles.first}"
+	elsif profiles.length > 6
+		write_line "#{name}: Found over 6 profiles"
+	else
+		write_line "#{name}: #{profiles.join(", ")}"
+	end
+end
+
+
+@f.close
+puts "Done"

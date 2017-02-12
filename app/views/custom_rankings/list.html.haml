@@ -1,0 +1,21 @@
+- @page_title = "Custom division listings"
+- cache("custom/division/list", :raw => true, :expires_in => 30.minutes) do
+	.w960
+		.divisioninfo.shadow
+			#{wrap_number(number_with_delimiter(CustomRanking.count))} custom divisions have been created
+	.spacer
+	.w960
+		%table.shadow.customlist#sortlist{:cellspacing => "1px"}
+			%tr
+				%th Name
+				%th Message
+			- CustomRanking.all(:conditions => {:is_public => true}, :order => "name ASC").each do |custom|
+				%tr{:class => cycle("darkbg", "lightbg")}
+					%td.name= link_to custom.name, custom_division_name_path(custom.id, parameterize(custom.name))
+					- if custom.message.length > 80
+						%td.listmessage
+							= custom.message[1, 80]
+							\...
+					- else
+						%td.listmessage= custom.message
+	.clearb

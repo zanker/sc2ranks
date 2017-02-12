@@ -1,0 +1,39 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+def update_logs(league, bracket, region)
+	rank_column = region == "global" ? "world_rank" : "region_rank"
+	region_sql = region != "global" && " AND region = '#{region}'" || ""
+
+	# Do 1v1, 2v2, 3v3, 4v4 teams
+	begin
+		ActiveRecord::Base.connection.execute("UPDATE teams_patch_130 SET #{rank_column} = t.rank FROM (SELECT tp.id, rank() OVER (ORDER BY points DESC) as rank FROM teams_patch_130 AS tp WHERE league = #{league} AND is_random = false AND bracket = #{bracket}#{region_sql}) as t WHERE teams_patch_130.id=t.id");
+	rescue ActiveRecord::StatementInvalid => si
+		puts si.message
+	end
+
+
+	# Now do 2v2, 3v3, 4v4 random teams
+	if bracket > 1
+		begin
+			ActiveRecord::Base.connection.execute("UPDATE teams_patch_130 SET #{rank_column} = t.rank FROM (SELECT tp.id, rank() OVER (ORDER BY points DESC) as rank FROM teams_patch_130 AS tp WHERE league = #{league} AND is_random = true AND bracket = #{bracket}#{region_sql}) as t WHERE teams_patch_130.id=t.id");
+		rescue ActiveRecord::StatementInvalid => si
+			puts si.message
+		end
+	end
+	
+	puts "Finished #{league}, #{bracket}, #{region}"
+end
+
+LEAGUE_LIST.each do |league|
+	BRACKETS.each do |bracket|
+		ActiveRecord::Base.transaction do
+			REGIONS_GLOBAL.each do |region|
+				update_logs(league, bracket, region)
+			end
+		end
+	end
+end

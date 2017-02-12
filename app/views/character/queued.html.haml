@@ -1,0 +1,6 @@
+- @page_title = "Player queued"
+:javascript
+	setTimeout("window.location.reload();", #{@eta} * 1000)
+.w960
+	.shadow.queued
+		Loading #{params[:region].upcase}-#{params[:name].capitalize} (bnet id #{params[:bnet_id]}). You are #<span class='number'>#{@position}</span> in the queue, ETA #{distance_in_words(@eta)}.

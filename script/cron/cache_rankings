@@ -1,0 +1,99 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+cache_id = ARGV.first.strip
+if cache_id.blank?
+	puts "No cache id passed"
+	return
+end
+
+lock_file = "#{RAILS_ROOT}/tmp/cache-rankings-#{cache_id}.lock"
+require "#{RAILS_ROOT}/script/current_season.rb";
+
+if FileTest.exists?(lock_file) && File.ctime(lock_file) >= 1.day.ago.utc
+	puts "Already recaching #{cache_id}, returned"
+	return
+end
+
+FileUtils.touch(lock_file)
+
+start_time = Time.now.to_f
+
+if cache_id == "all"
+	ActiveRecord::Base.connection.execute("INSERT INTO team_rankings(team_id) (SELECT id FROM teams WHERE league != #{LEAGUES["master"]} AND division_id IS NOT NULL AND season = #{current_season} AND NOT EXISTS (SELECT 1 FROM team_rankings WHERE team_id=teams.id))")
+else
+	ActiveRecord::Base.connection.execute("INSERT INTO team_rankings(team_id) (SELECT id FROM teams WHERE league = #{LEAGUES[cache_id]} AND division_id IS NOT NULL AND season = #{current_season} AND NOT EXISTS (SELECT 1 FROM team_rankings WHERE team_id=teams.id))")
+end
+
+def update_logs(league, bracket, region, expansion)
+	rank_column = region == "global" ? "world_rank" : "region_rank"
+	region_sql = region != "global" && " AND region = '#{region}'" || ""
+
+	# Do 1v1, 2v2, 3v3, 4v4 teams
+	begin
+		ActiveRecord::Base.connection.execute("UPDATE team_rankings SET #{rank_column} = t.rank FROM (SELECT id, points, rank() OVER (ORDER BY points DESC) as rank FROM teams WHERE expansion = #{expansion} AND league = #{league} AND is_random = false AND bracket = #{bracket} AND division_id IS NOT NULL AND season = #{current_season} #{region_sql}) as t WHERE team_rankings.team_id=t.id")
+	rescue ActiveRecord::StatementInvalid => si
+		puts si.message
+	end
+
+
+	# Now do 2v2, 3v3, 4v4 random teams
+	if bracket > 1
+		begin
+			ActiveRecord::Base.connection.execute("UPDATE team_rankings SET #{rank_column} = t.rank FROM (SELECT id, points, rank() OVER (ORDER BY points DESC) as rank FROM teams WHERE league = #{league} AND expansion = #{expansion} AND is_random = true AND bracket = #{bracket}AND division_id IS NOT NULL AND season = #{current_season} #{region_sql}) as t WHERE team_rankings.team_id=t.id")
+		rescue ActiveRecord::StatementInvalid => si
+			puts si.message
+		end
+	end
+end
+
+if cache_id == "all"
+	EXPANSIONS.each_key do |expansion|
+		LEAGUE_LIST.each do |league|
+			next if league == LEAGUES["master"] or league == LEAGUES["grandmaster"]
+			BRACKETS.each do |bracket|
+				ActiveRecord::Base.transaction do
+					REGIONS_GLOBAL.each do |region|
+						update_logs(league, bracket, region, expansion)
+					end
+				end
+			end
+		end
+	end
+else
+	EXPANSIONS.each_key do |expansion|
+		BRACKETS.each do |bracket|
+			ActiveRecord::Base.transaction do
+				REGIONS_GLOBAL.each do |region|
+					update_logs(LEAGUES[cache_id], bracket, region, expansion)
+				end
+			end
+		end
+	end
+end
+
+
+puts "Finished in %.2f minutes" % [(Time.now.to_f - start_time) / 60]
+start_time = Time.now.to_f
+
+# Sync points so we reduce future updates
+begin
+	ActiveRecord::Base.connection.execute("UPDATE team_rankings SET points = t.points FROM (SELECT id, points FROM teams WHERE league #{cache_id == "all" ? "!" : ""}= #{LEAGUES["master"]}) as t WHERE team_rankings.team_id=t.id AND team_rankings.points != t.points")
+rescue ActiveRecord::StatementInvalid => si
+	puts si.message
+end
+
+puts "Finished syncing points in %.2f minutes" % [(Time.now.to_f - start_time) / 60]
+
+if cache_id == "all"
+	start_time = Time.now.to_f
+
+	ActiveRecord::Base.connection.execute("ANALYZE team_rankings")
+
+	puts "Finished cleaning up in %.2f minutes" % [(Time.now.to_f - start_time) / 60]
+end
+
+FileUtils.safe_unlink(lock_file)

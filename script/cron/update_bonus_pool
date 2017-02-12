@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "cgi"
+
+Division.all(:select => "MAX(bonus_pool) as bonus_pool, region", :conditions => ["bonus_pool <= 50000"], :group => "region").each do |division|
+	region_pool = RegionBonusPool.first(:conditions => {:region => division.region}) || RegionBonusPool.new(:region => division.region)
+	region_pool.max_pool = division.bonus_pool.to_i
+	region_pool.save
+end
+
+

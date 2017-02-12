@@ -1,0 +1,45 @@
+#!/usr/bin/env ruby-worker-env
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+require "uri"
+require "net/http"
+puts "Loading top 200 match history"
+require "#{RAILS_ROOT}/script/current_season.rb";
+full_run = Time.now.to_f
+
+conditions = Rails.cache.read("maint/checks")
+conditions = conditions.blank? ? "" : " AND #{conditions}"
+
+
+Team.all(:select => "id, division_id", :conditions => ["league = ? AND bracket = ? AND is_random = ? AND division_id IS NOT NULL AND season = ? AND expansion = ?#{conditions}", LEAGUES["grandmaster"], 1, false, current_season, CURRENT_EXPANSION], :order => "points DESC", :limit => 200, :include => :first_character).each do |team|
+	character = team.first_character
+	
+	time_taken = Time.now.to_f
+	full_url = "profile/#{character.bnet_id}/#{LOCALE_IDS[character.region]}/#{URI.escape(character.name)}/matches"
+	
+	begin
+		content = 	Armory::Node.cron_pull(character.region, full_url)
+				
+		time_taken = Time.now.to_f - time_taken
+		time_taken = "%.2f" % time_taken		
+		
+		doc = Nokogiri::HTML(content)
+		next if doc.nil?
+
+		# Grab data
+		Jobs::Profile.parse_match_history(character, doc, content)
+		Jobs::Profile.save_character(character, doc, content)
+	rescue EOFError, OpenURI::HTTPError, Errno::ECONNRESET, Timeout::Error, SocketError, Errno::ECONNREFUSED, Errno::ETIMEDOUT, Errno::EHOSTUNREACH, Errno::ENETUNREACH => e
+		puts e.to_s
+		puts full_url
+	end
+end
+
+puts "Finished! Took %.2f seconds" % (Time.now.to_f - full_run)
+
+
+
+
+

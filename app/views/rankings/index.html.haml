@@ -1,0 +1,41 @@
+- @page_title = "#{@region ? REGION_NAMES[@region] : "Global"} #{@is_random ? "R " : ""}#{@bracket}v#{@bracket} rankings#{@offset > 0 ? " (page #{(@offset / 100).ceil + 1})" : ""}" if params.length != 2
+- cache(@page_hash, :raw => true, :expires_in => @cache_time) do
+	- if @offset == 0
+		- cache("twitter/news", :raw => true, :expires_in => 20.minutes) do
+			.w960
+				.shadow.divisionmsg= twitter_news
+			.spacer
+	- if params[:sort] == "pointpool"
+		.w960
+			.shadow.divisioninfo Characters shown are sorted by their points minus the bonus pool for their region (not bonus pool consumed) to account for inflation.
+		.spacer
+	.w960
+		= build_pagination(PAGINATION[:default], @total_teams, "paginate-top")
+		.paginate-top.paginate-search
+			- form_tag(rank_search_path({:league => params[:league], :bracket => params[:bracket], :region => params[:region], :sort => params[:sort], :race => params[:race], :activity => params[:activity], :previous_id => params[:character], :team_offset => params[:team_offset] ? (params[:team_offset].to_i + 1) : 0}), :method => :post, :class => "csearch-form") do
+				Find page for
+				- unless @region
+					= select(:ranksearch, :region, REGION_SELECT_SHORT, :selected => @character && @character.region || @region || cookies[:code_region] || "us")
+				= text_field_tag("ranksearch[name]", @character && @character.name, :class => "csearch-name")
+				%label #
+				= text_field_tag("ranksearch[code]", @character && @character.character_code, :class => "csearch-code")
+		.clearb
+		- if @offset == 0 and @stats
+			.w960
+				.shadow.stats= character_stats(@stats)
+		%table.shadow.rankings#sortlist{:cellspacing => "1px"}
+			%tr
+				= build_columns(:league => @league || "all", :region => @region, :bracket => @bracket, :is_random => @is_random)
+			- if @total_teams == 0
+				%tr.darkbg
+					%td{:colspan => 10} Cannot find any players.
+			- else
+				= build_rows(@rankings, :league => @league || "all", :region => @region, :bracket => @bracket, :offset => @offset, :is_random => @is_random, :character_id => params[:character].to_i)
+		= build_pagination(PAGINATION[:default], @total_teams, "paginate-bottom")
+
+		= javascript_include_tag("sorttable", :cache => "cache-sorttable", :lifetime => 1.month)
+		:javascript
+			var bracket = #{@bracket}
+			setup_table()
+			load_default_search()
+	.clearb

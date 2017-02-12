@@ -1,0 +1,39 @@
+- @page_title = "Custom division creation"
+- form_tag custom_division_update_path, :method => :post do
+	.w960
+		.shadow.customdiv
+			%h1.header Creating a new custom division
+			.rowsep
+			.desc Custom divisions allow you to create your own listings based on regions, or even for your friends all with sc2ranks data. You don't have to deal with updating data, skinning or providing any sort of search. Your email will not be given out, it is only used if you lose your admin password.
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Name (30 characters max)
+				= text_field_tag "division[name]", params[:division] && params[:division][:name]
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Message
+				= text_field_tag "division[message]", params[:division] && params[:division][:message]
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Email
+				= text_field_tag "division[email]", params[:division] && params[:division][:email]
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Password
+				= password_field_tag "division[password]"
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Confirm password
+				= password_field_tag "division[confirm_password]"
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Public division
+				= check_box_tag "division[is_public]", "1", params[:division] && params[:division][:is_public]
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Show regions
+				= check_box_tag "division[show_regions]", "1", params[:division] ? params[:division][:show_regions] : true
+			-#.row{:class => cycle("darkbg", "lightbg")}
+			-#	%label Show character codes
+			-#	= check_box_tag "division[show_codes]", "1", params[:division] ? params[:division][:show_codes] : false
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Allow everyone to add characters
+				= check_box_tag "division[allow_add]", "1", params[:division] && params[:division][:allow_add]
+			.row{:class => cycle("darkbg", "lightbg")}
+				%label Allow everyone to remove characters
+				= check_box_tag "division[allow_remove]", "0", params[:division] && params[:division][:allow_remove]
+			.row{:class => cycle("darkbg", "lightbg")}
+				= submit_tag "Submit"

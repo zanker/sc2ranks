@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+require "uri"
+require "config/initializers/jobs.rb"
+require "nokogiri"
+
+response, url = Armory::Node.pull_custom_data("us", ["profile", 789884, 1, "SeleCT", "achievements", ""])
+Jobs::PullAchievements.parse({:bnet_id => 789884, :region => "us", :name => "SeleCT"}, Nokogiri::HTML(response), response)
+
+#character = Character.first(:conditions => {:region => "us", :bnet_id => 388538})
+#response, url = Armory::Node.pull_custom_data("us", ["profile", character.bnet_id, LOCALE_IDS[character.region], URI.escape(character.name), "matches"])
+#Jobs::Profile.parse_match_history(character, Nokogiri::HTML(response), response)

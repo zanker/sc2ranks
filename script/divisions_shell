@@ -1,0 +1,2 @@
+#!/bin/sh
+/bin/su -c '/usr/bin/env RAILS_ENV=production /web/sc2ranks/script/cron/update_divisions'

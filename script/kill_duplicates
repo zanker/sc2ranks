@@ -1,0 +1,52 @@
+#!/usr/bin/env ruby
+RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+Dir.chdir(RAILS_ROOT)
+require "rubygems"
+require "#{RAILS_ROOT}/config/environment.rb"
+
+total_killed = 0
+
+REGIONS.each do |region|
+	puts "Checking #{region}"
+	Character.all(:select => "bnet_id", :conditions => { :region => region }, :group => "bnet_id", :having => "COUNT(*) > 1").each do |new_char|
+		new_char = Character.first(:conditions => { :region => region, :bnet_id => new_char.bnet_id })
+		puts "New master is #{new_char.id}"
+		
+		# Now all of the duplicate ids
+		all_ids = [new_char.id]
+		Character.all(:conditions => ["region = ? AND bnet_id = ? AND id != ?", region, new_char.bnet_id, new_char.id]).each do |dup_char|
+			all_ids.push(dup_char.id)
+			
+			new_char.character_code ||= dup_char.character_code
+			puts "Found duplicate character #{dup_char.id}"
+		end
+		
+		# Now find all the team relations
+		team_list = {}
+		relation_ids = []
+		TeamCharacter.all(:conditions => ["character_id IN (?)", all_ids]).each do |relation|
+			team_list[relation.team_id] = true
+			relation_ids.push(relation.id)
+			
+			puts "Found link team #{relation.team_id} for ##{relation.character_id}, relation id #{relation.id}"
+		end
+		
+		# Remove all links
+		TeamCharacter.destroy_all(["id IN (?) AND character_id IN (?)", relation_ids, all_ids])
+		
+		# Recreate all links
+		team_list.keys.each do |team_id|
+			TeamCharacter.create(:team_id => team_id, :character_id => new_char.id)
+			puts "Recreated link #{team_id}"
+		end
+		
+		Character.destroy_all(["bnet_id = ? AND region = ? and id != ?", new_char.bnet_id, region, new_char.id])
+		puts "[#{total_killed}] Relinked #{new_char.region.upcase}-#{new_char.name} for #{new_char.bnet_id}"
+		total_killed += 1
+	end
+end
+
+
+
+
+
